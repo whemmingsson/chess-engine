@@ -4,16 +4,26 @@ import { Board } from "./types/Board";
 import { toPosition } from "./utils/ConversionUtils";
 import { generators } from "./ValidTargetCellsGenerators";
 
-type pieceMoveValidatorFunc = (move: Move, board: Board) => boolean;
+type pieceMoveValidatorFunc = (
+  move: Move,
+  board: Board,
+  history?: Move[],
+) => boolean;
 
 export type validatorsType = Record<PieceClass, pieceMoveValidatorFunc>;
 
-const validateMoveFor = (move: Move, board: Board, pieceClass: PieceClass) => {
+const validateMoveFor = (
+  pieceClass: PieceClass,
+  move: Move,
+  board: Board,
+  history?: Move[],
+) => {
   const { source, target } = move;
 
   const targetCells = generators[pieceClass].generate(
     toPosition(source),
     board,
+    history,
   );
   const isValidMove = targetCells.some((p) => p === target);
 
@@ -26,22 +36,22 @@ const validateMoveFor = (move: Move, board: Board, pieceClass: PieceClass) => {
 
 //Validators
 export const validators: validatorsType = {
-  Pawn: (m, b) => {
-    return validateMoveFor(m, b, "Pawn");
+  Pawn: (m, b, h) => {
+    return validateMoveFor("Pawn", m, b, h);
   },
   Rook: (m, b) => {
-    return validateMoveFor(m, b, "Rook");
+    return validateMoveFor("Rook", m, b);
   },
   King: (m, b) => {
-    return validateMoveFor(m, b, "King");
+    return validateMoveFor("King", m, b);
   },
   Queen: (m, b) => {
-    return validateMoveFor(m, b, "Queen");
+    return validateMoveFor("Queen", m, b);
   },
   Bishop: (m, b) => {
-    return validateMoveFor(m, b, "Bishop");
+    return validateMoveFor("Bishop", m, b);
   },
   Knight: (m, b) => {
-    return validateMoveFor(m, b, "Knight");
+    return validateMoveFor("Knight", m, b);
   },
 };

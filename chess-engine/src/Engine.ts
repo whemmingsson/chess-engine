@@ -8,12 +8,14 @@ import { generators } from "./ValidTargetCellsGenerators";
 
 export class Engine {
   board: Record<string, Piece | null>;
+  history: Move[];
   colorToMove: PieceColor;
   constructor() {
     console.log("Chess engine initialized");
     this.colorToMove = "White";
     this.board = {};
     this._initBoard();
+    this.history = [];
   }
 
   _initBoard() {
@@ -30,6 +32,10 @@ export class Engine {
 
   print() {
     console.log("Current board state: ", this.board);
+    console.log(
+      "Current history:",
+      this.history.map((move) => move.source + " -> " + move.target).join("\n"),
+    );
   }
 
   getPieceAtCell(cellKey: string): Piece | null {
@@ -93,7 +99,7 @@ export class Engine {
   canSpecificPieceMove(move: Move) {
     // This validate piece-specific rules
     const piece = this.getPieceAtCell(move.source)!;
-    return validators[piece.class](move, this.board);
+    return validators[piece.class](move, this.board, this.history);
   }
 
   movePiece(move: Move) {
@@ -112,6 +118,7 @@ export class Engine {
     this.board[move.target] = this.getPieceAtCell(move.source);
     this.board[move.source] = null;
     this.colorToMove = otherColor(this.colorToMove);
+    this.history.push(move);
   }
 
   getValidPositionsForPiece(source: string) {
@@ -122,7 +129,11 @@ export class Engine {
       return [];
     }
 
-    return generators[piece.class].generate(toPosition(source), this.board);
+    return generators[piece.class].generate(
+      toPosition(source),
+      this.board,
+      this.history,
+    );
   }
 
   getBoard() {

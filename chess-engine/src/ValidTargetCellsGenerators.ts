@@ -1,10 +1,11 @@
 import { Board } from "./types/Board";
 import { Position } from "./types/Position";
-import { otherColor, toCell } from "./utils/ConversionUtils";
+import { otherColor, toCell, toPosition } from "./utils/ConversionUtils";
 import { PieceClass } from "../../common/models/Piece";
+import { Move } from "../../common/models/Move";
 
 type TargetCellGenerator = {
-  generate: (source: Position, board: Board) => string[];
+  generate: (source: Position, board: Board, history?: Move[]) => string[];
 };
 
 // Utilities
@@ -148,7 +149,11 @@ const generateValidCardinalPositions = (b: Board, s: Position) => {
   return possiblePositions;
 };
 
-const generateValidPawnPositions = (board: Board, source: Position) => {
+const generateValidPawnPositions = (
+  board: Board,
+  source: Position,
+  lastMove: Move | undefined,
+) => {
   const possiblePositions: Position[] = [];
   const sourceCell = toCell(source);
   const piece = board[sourceCell]!;
@@ -157,14 +162,18 @@ const generateValidPawnPositions = (board: Board, source: Position) => {
   const direction = isWhite ? 1 : -1;
   const forwardOne = { column: source.column, row: source.row + direction };
   const forwardTwo = { column: source.column, row: source.row + direction * 2 };
+
   const diagonalLeft = {
     column: source.column - 1,
     row: source.row + direction,
   };
+
   const diagonalRight = {
     column: source.column + 1,
     row: source.row + direction,
   };
+
+  // Basic move logic + capture
 
   if (!board[toCell(forwardOne)]) {
     possiblePositions.push(forwardOne);
@@ -174,14 +183,95 @@ const generateValidPawnPositions = (board: Board, source: Position) => {
     possiblePositions.push(forwardTwo);
   }
 
-  const leftTarget = board[toCell(diagonalLeft)];
-  if (leftTarget && leftTarget.color !== piece.color) {
+  const diagonalLeftTarget = board[toCell(diagonalLeft)];
+  if (diagonalLeftTarget && diagonalLeftTarget.color !== piece.color) {
     possiblePositions.push(diagonalLeft);
   }
 
-  const rightTarget = board[toCell(diagonalRight)];
-  if (rightTarget && rightTarget.color !== piece.color) {
+  const diagnoalRightTarget = board[toCell(diagonalRight)];
+  if (diagnoalRightTarget && diagnoalRightTarget.color !== piece.color) {
     possiblePositions.push(diagonalRight);
+  }
+
+  // First move - en passant is not possible
+  if (!lastMove) {
+    return possiblePositions;
+  }
+
+  // Last move was NOT a pawn - en passant is not possible
+  if (
+    lastMove &&
+    board[lastMove.target] &&
+    board[lastMove.target]?.class !== "Pawn"
+  ) {
+    return possiblePositions;
+  }
+
+  // Last move was a pawn - but the same color as the current moving pawn (should not really happen but whatever)
+  if (
+    lastMove &&
+    board[lastMove.target] &&
+    board[lastMove.target]?.class === "Pawn" &&
+    board[lastMove.target]?.color === piece.color
+  ) {
+    return possiblePositions;
+  }
+
+  // Last move was a pawn, but not a 2-step initial move
+  const lastMoveSourcePosition = toPosition(lastMove.source);
+  const lastMoveTargetPosition = toPosition(lastMove.target);
+  if (
+    lastMove &&
+    board[lastMove.target] &&
+    board[lastMove.target]?.class === "Pawn" &&
+    board[lastMove.target]?.color !== piece.color &&
+    (Math.abs(lastMoveTargetPosition.row - lastMoveSourcePosition.row) !== 2 ||
+      lastMoveSourcePosition.column !== lastMoveTargetPosition.column)
+  ) {
+    return possiblePositions;
+  }
+
+  // En passant logic
+  const right = {
+    column: source.column + 1,
+    row: source.row,
+  };
+
+  const left = {
+    column: source.column - 1,
+    row: source.row,
+  };
+
+  const rightCell = toCell(right);
+  const rightTarget = board[rightCell];
+  const enPassantRightPosition = {
+    column: right.column,
+    row: source.row + direction,
+  };
+
+  if (
+    rightTarget &&
+    rightTarget.class === "Pawn" &&
+    rightCell === lastMove?.target &&
+    !board[toCell(enPassantRightPosition)]
+  ) {
+    possiblePositions.push(enPassantRightPosition);
+  }
+
+  const leftCell = toCell(left);
+  const leftTarget = board[leftCell];
+  const enPassantLeftPosition = {
+    column: left.column,
+    row: source.row + direction,
+  };
+
+  if (
+    leftTarget &&
+    leftTarget.class === "Pawn" &&
+    leftCell === lastMove?.target &&
+    !board[toCell(enPassantLeftPosition)]
+  ) {
+    possiblePositions.push(enPassantLeftPosition);
   }
 
   return possiblePositions;
@@ -251,8 +341,10 @@ export const generators: Record<PieceClass, TargetCellGenerator> = {
     },
   },
   Pawn: {
-    generate: (source: Position, board: Board): string[] => {
-      return generateValidPawnPositions(board, source).map(toCell);
+    generate: (source: Position, board: Board, history?: Move[]): string[] => {
+      const lastMove = history?.at(history.length - 1);
+      console.log("Last move was:", lastMove);
+      return generateValidPawnPositions(board, source, lastMove).map(toCell);
     },
   },
 };
