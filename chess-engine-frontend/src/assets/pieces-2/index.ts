@@ -1,0 +1,12 @@
+export { default as bishopB } from "./Chess_bdt45.svg";
+export { default as bishopW } from "./Chess_blt45.svg";
+export { default as kingB } from "./Chess_kdt45.svg";
+export { default as kingW } from "./Chess_klt45.svg";
+export { default as knightB } from "./Chess_ndt45.svg";
+export { default as knightW } from "./Chess_nlt45.svg";
+export { default as pawnB } from "./Chess_pdt45.svg";
+export { default as pawnW } from "./Chess_plt45.svg";
+export { default as queenB } from "./Chess_qdt45.svg";
+export { default as queenW } from "./Chess_qlt45.svg";
+export { default as rookB } from "./Chess_rdt45.svg";
+export { default as rookW } from "./Chess_rlt45.svg";

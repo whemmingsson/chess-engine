@@ -1,0 +1,29 @@
+{
+	"name": "chess-engine",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Simple Node.js app compiled from TypeScript with tsc",
+	"main": "dist/chess-engine/src/index.js",
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsx watch src/index.ts",
+		"dev:debug": "tsx watch src/Driver.ts",
+		"start": "node dist/chess-engine/src/index.js",
+		"clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\""
+	},
+	"engines": {
+		"node": ">=18"
+	},
+	"devDependencies": {
+		"@types/cors": "^2.8.19",
+		"@types/express": "^5.0.6",
+		"@types/node": "^25.9.3",
+		"tsx": "^4.22.4",
+		"typescript": "^6.0.3"
+	},
+	"dependencies": {
+		"cors": "^2.8.6",
+		"dotenv": "^17.4.2",
+		"express": "^5.2.1"
+	}
+}
