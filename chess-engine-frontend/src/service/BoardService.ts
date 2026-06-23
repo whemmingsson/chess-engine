@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Move } from "../../../common/models/Move";
+import type { EnrichedMove } from "../../../common/models/EnrichedMove";
 import type { Piece } from "../../../common/models/Piece";
 
 type BoardFile = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
@@ -54,7 +54,7 @@ export const BoardService = {
     return response.data;
   },
 
-  async move(move: Move): Promise<MoveResponse> {
+  async move(move: EnrichedMove): Promise<MoveResponse> {
     try {
       const response = await api.post<MoveSuccessResponse>("/move", move);
       return response.data;

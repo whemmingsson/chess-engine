@@ -18,5 +18,6 @@ export const config = {
   },
   engine: {
     disablePlayOrder: toBoolean(process.env.DISABLE_PLAY_ORDER, false),
+    autoPromoteToQueen: toBoolean(process.env.AUTO_PROMOTE_TO_QUEEN, false),
   },
 };

@@ -1,5 +1,5 @@
 import { pieceMap } from "../../common/config/board-config";
-import { HistoryMove } from "../../common/models/HistoryMove";
+import { EnrichedMove } from "../../common/models/EnrichedMove";
 import { Move } from "../../common/models/Move";
 import {
   nameOf,
@@ -12,14 +12,15 @@ import { validators } from "./PieceRules";
 import {
   otherColor,
   toCell,
-  toHistoryMove,
+  enrichMove,
   toPosition,
 } from "./utils/ConversionUtils";
+import { createNewPieceOfClass } from "./utils/PieceUtils";
 import { generators } from "./ValidTargetCellsGenerators";
 
 export class Engine {
   board: Record<string, Piece | null>;
-  history: HistoryMove[];
+  history: EnrichedMove[];
   colorToMove: PieceColor;
   constructor() {
     console.log("Chess engine initialized");
@@ -112,6 +113,52 @@ export class Engine {
     delete this.board[move.source];
   }
 
+  _isPromotionMove(move: Move) {
+    if (!this._isPieceClassAt("Pawn", move.source)) {
+      return false;
+    }
+
+    const targetPosition = toPosition(move.target);
+
+    return targetPosition.row === 1 || targetPosition.row === 8;
+  }
+
+  _handlePromotionMove(move: EnrichedMove) {
+    const pawnToPromote = this.board[move.source]!;
+
+    if (config.engine.autoPromoteToQueen) {
+      this._promoteToPieceAt("Queen", pawnToPromote.color, move.target);
+      delete this.board[move.source];
+      return;
+    }
+
+    if (!move.metadata?.promoteTo) {
+      throw Error(
+        "Missing promotion metadata. Set move.metadata.promoteTo to desired class.",
+      );
+    }
+
+    if (move.metadata?.promoteTo === "King") {
+      throw Error("Invalid promotion metadata. Cannot promote to King.");
+    }
+
+    this._promoteToPieceAt(
+      move.metadata.promoteTo,
+      pawnToPromote.color,
+      move.target,
+    );
+
+    delete this.board[move.source];
+  }
+
+  _promoteToPieceAt(
+    pieceClass: PieceClass,
+    pieceColor: PieceColor,
+    targetCell: string,
+  ) {
+    this.board[targetCell] = createNewPieceOfClass(pieceClass, pieceColor);
+  }
+
   print() {
     console.log("Current board state: ", this.board);
     console.log(
@@ -157,7 +204,7 @@ export class Engine {
     return validators[piece.class](move, this.board, this.history);
   }
 
-  movePiece(move: Move) {
+  movePiece(move: EnrichedMove) {
     // Guard clauses
     if (!this._isMoveObjectValid(move)) {
       return;
@@ -174,7 +221,10 @@ export class Engine {
     // Specific piece handling
     if (this._isEnPassantMove(move)) {
       this._handleEnPassantMoveAndCapture(move);
-      this.history.push(toHistoryMove(move, { enPassant: true }));
+      this.history.push(enrichMove(move, { enPassant: true }));
+    } else if (this._isPromotionMove(move)) {
+      this._handlePromotionMove(move);
+      this.history.push(move);
     } else {
       this._handleDefaultMove(move);
       this.history.push(move);

@@ -1,4 +1,7 @@
-import { HistoryMove, MoveMetaData } from "../../../common/models/HistoryMove";
+import {
+  EnrichedMove,
+  MoveMetaData,
+} from "../../../common/models/EnrichedMove";
 import { Move } from "../../../common/models/Move";
 import { PieceColor } from "../../../common/models/Piece";
 import { Position } from "../types/Position";
@@ -23,9 +26,6 @@ export const otherColor = (color: PieceColor): PieceColor => {
   return color === "White" ? "Black" : "White";
 };
 
-export const toHistoryMove = (
-  m: Move,
-  metadata?: MoveMetaData,
-): HistoryMove => {
+export const enrichMove = (m: Move, metadata?: MoveMetaData): EnrichedMove => {
   return { ...m, metadata };
 };

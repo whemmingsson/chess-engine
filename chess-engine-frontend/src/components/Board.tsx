@@ -2,10 +2,11 @@ import clsx from "clsx";
 import styles from "./Board.module.css";
 import { getPieceSvg } from "../utils/piece-svg-util";
 import React from "react";
-import type { Move } from "../../../common/models/Move";
-import type { Piece } from "../../../common/models/Piece";
+import type { EnrichedMove } from "../../../common/models/EnrichedMove";
+import type { Piece, PieceClass } from "../../../common/models/Piece";
 import { useBoard } from "../hooks/useBoard";
 import type { BoardCellKey } from "../service/BoardService";
+import { pieceDefinitionMap } from "../../../common/config/board-config";
 
 const toLetter = (index: number) => {
   return String.fromCharCode(index + 65);
@@ -14,6 +15,13 @@ const toLetter = (index: number) => {
 export const Board = () => {
   const [selectedFromCell, setSelectedFromCell] =
     React.useState<BoardCellKey | null>(null);
+  const [pendingPromotionMove, setPendingPromotionMove] = React.useState<{
+    source: BoardCellKey;
+    target: BoardCellKey;
+    color: Piece["color"];
+  } | null>(null);
+
+  const promotionOptions: PieceClass[] = ["Queen", "Rook", "Bishop", "Knight"];
 
   const {
     board,
@@ -36,6 +44,10 @@ export const Board = () => {
   );
 
   const handleCellClick = (cellKey: BoardCellKey) => {
+    if (pendingPromotionMove) {
+      return;
+    }
+
     if (!selectedFromCell) {
       const piece = getPiece(cellKey);
       if (!piece) {
@@ -51,7 +63,21 @@ export const Board = () => {
 
   const handleClearClick = () => {
     setSelectedFromCell(null);
+    setPendingPromotionMove(null);
     clearValidTargetCells();
+  };
+
+  const isPromotionTarget = (
+    piece: Piece,
+    targetCell: BoardCellKey,
+  ): boolean => {
+    if (piece.class !== "Pawn") {
+      return false;
+    }
+
+    const targetRank = Number.parseInt(targetCell[1], 10);
+    const promotionRank = piece.color === "White" ? 8 : 1;
+    return targetRank === promotionRank;
   };
 
   const handleSubmitMove = async (
@@ -66,7 +92,16 @@ export const Board = () => {
       return;
     }
 
-    const move: Move = {
+    if (isPromotionTarget(piece, targetCell)) {
+      setPendingPromotionMove({
+        source: sourceCell,
+        target: targetCell,
+        color: piece.color,
+      });
+      return;
+    }
+
+    const move: EnrichedMove = {
       source: sourceCell,
       target: targetCell,
     };
@@ -78,6 +113,34 @@ export const Board = () => {
     }
 
     handleClearClick();
+  };
+
+  const handlePromotionSelection = async (
+    promoteTo: (typeof promotionOptions)[number],
+  ) => {
+    if (!pendingPromotionMove) {
+      return;
+    }
+
+    const move: EnrichedMove = {
+      source: pendingPromotionMove.source,
+      target: pendingPromotionMove.target,
+      metadata: {
+        promoteTo,
+      },
+    };
+
+    const result = await submitMove(move);
+    if (!result.success) {
+      alert(result.message);
+      return;
+    }
+
+    handleClearClick();
+  };
+
+  const handlePromotionCancel = () => {
+    setPendingPromotionMove(null);
   };
 
   if (isLoadingBoard || !board) {
@@ -134,6 +197,40 @@ export const Board = () => {
           onClick={() => handleClearClick()}
         />
       </div>
+      {pendingPromotionMove && (
+        <div className={styles.promotionModalBackdrop}>
+          <div className={styles.promotionModal}>
+            <h2 className={styles.promotionTitle}>Choose Promotion Piece</h2>
+            <div className={styles.promotionOptions}>
+              {promotionOptions.map((pieceClass) => (
+                <button
+                  key={pieceClass}
+                  type="button"
+                  className={styles.promotionOptionButton}
+                  onClick={() => void handlePromotionSelection(pieceClass)}
+                >
+                  <img
+                    className={styles.promotionOptionImage}
+                    src={getPieceSvg({
+                      ...pieceDefinitionMap[pieceClass],
+                      color: pendingPromotionMove.color,
+                    })}
+                    alt={pieceClass}
+                  />
+                  <span>{pieceClass}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className={styles.promotionCancelButton}
+              onClick={handlePromotionCancel}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
