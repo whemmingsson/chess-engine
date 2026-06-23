@@ -25,6 +25,7 @@ const validateMoveFor = (
     board,
     history,
   );
+
   const isValidMove = targetCells.some((p) => p === target);
 
   if (!isValidMove) {

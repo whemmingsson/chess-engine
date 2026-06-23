@@ -1,21 +1,34 @@
 import { pieceMap } from "../../common/config/board-config";
+import { HistoryMove } from "../../common/models/HistoryMove";
 import { Move } from "../../common/models/Move";
-import { nameOf, Piece, PieceColor } from "../../common/models/Piece";
+import {
+  nameOf,
+  Piece,
+  PieceClass,
+  PieceColor,
+} from "../../common/models/Piece";
 import { config } from "./config/config";
 import { validators } from "./PieceRules";
-import { otherColor, toPosition } from "./utils/ConversionUtils";
+import {
+  otherColor,
+  toCell,
+  toHistoryMove,
+  toPosition,
+} from "./utils/ConversionUtils";
 import { generators } from "./ValidTargetCellsGenerators";
 
 export class Engine {
   board: Record<string, Piece | null>;
-  history: Move[];
+  history: HistoryMove[];
   colorToMove: PieceColor;
   constructor() {
     console.log("Chess engine initialized");
+
     this.colorToMove = "White";
     this.board = {};
-    this._initBoard();
     this.history = [];
+
+    this._initBoard();
   }
 
   _initBoard() {
@@ -25,21 +38,9 @@ export class Engine {
         const cellRowNumber = i;
         const cellKey = cellColLetter + cellRowNumber;
         const piece = pieceMap[cellKey];
-        this.board[cellKey] = piece || null;
+        this.board[cellKey] = piece;
       }
     }
-  }
-
-  print() {
-    console.log("Current board state: ", this.board);
-    console.log(
-      "Current history:",
-      this.history.map((move) => move.source + " -> " + move.target).join("\n"),
-    );
-  }
-
-  getPieceAtCell(cellKey: string): Piece | null {
-    return this.board[cellKey] || null;
   }
 
   _isMoveObjectValid(move: Move) {
@@ -67,6 +68,60 @@ export class Engine {
     }
 
     return true;
+  }
+
+  _isPieceClassAt(pc: PieceClass, cell: string) {
+    return this.board[cell]?.class === pc;
+  }
+
+  _isEnPassantMove(move: Move) {
+    if (!this._isPieceClassAt("Pawn", move.source)) {
+      return false;
+    }
+
+    const s = toPosition(move.source);
+    const t = toPosition(move.target);
+    const isDiagonalMove =
+      Math.abs(s.column - t.column) === 1 && Math.abs(s.row - t.row) === 1;
+
+    if (!isDiagonalMove) {
+      return false;
+    }
+
+    const isTargetEmpty = !this.board[move.target];
+
+    return isTargetEmpty;
+  }
+
+  _handleEnPassantMoveAndCapture(move: Move) {
+    const pawnToMove = this.getPieceAtCell(move.source)!;
+
+    const targetPosition = toPosition(move.target);
+    const positionToClear = {
+      column: targetPosition.column,
+      row: targetPosition.row + (pawnToMove.color === "White" ? -1 : 1),
+    };
+
+    this.board[move.target] = pawnToMove;
+    delete this.board[toCell(positionToClear)];
+    delete this.board[move.source];
+  }
+
+  _handleDefaultMove(move: Move) {
+    this.board[move.target] = this.getPieceAtCell(move.source);
+    delete this.board[move.source];
+  }
+
+  print() {
+    console.log("Current board state: ", this.board);
+    console.log(
+      "Current history:",
+      this.history.map((move) => move.source + " -> " + move.target).join("\n"),
+    );
+  }
+
+  getPieceAtCell(cellKey: string): Piece | null {
+    return this.board[cellKey] || null;
   }
 
   canPieceMove(move: Move) {
@@ -103,6 +158,7 @@ export class Engine {
   }
 
   movePiece(move: Move) {
+    // Guard clauses
     if (!this._isMoveObjectValid(move)) {
       return;
     }
@@ -115,10 +171,16 @@ export class Engine {
       return;
     }
 
-    this.board[move.target] = this.getPieceAtCell(move.source);
-    this.board[move.source] = null;
+    // Specific piece handling
+    if (this._isEnPassantMove(move)) {
+      this._handleEnPassantMoveAndCapture(move);
+      this.history.push(toHistoryMove(move, { enPassant: true }));
+    } else {
+      this._handleDefaultMove(move);
+      this.history.push(move);
+    }
+
     this.colorToMove = otherColor(this.colorToMove);
-    this.history.push(move);
   }
 
   getValidPositionsForPiece(source: string) {

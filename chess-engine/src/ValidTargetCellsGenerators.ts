@@ -342,9 +342,19 @@ export const generators: Record<PieceClass, TargetCellGenerator> = {
   },
   Pawn: {
     generate: (source: Position, board: Board, history?: Move[]): string[] => {
-      const lastMove = history?.at(history.length - 1);
-      console.log("Last move was:", lastMove);
-      return generateValidPawnPositions(board, source, lastMove).map(toCell);
+      return generateValidPawnPositions(
+        board,
+        source,
+        history?.at(history.length - 1),
+      )
+        .filter(
+          (position) =>
+            position.row >= 1 &&
+            position.row <= 8 &&
+            position.column >= 1 &&
+            position.column <= 8,
+        )
+        .map(toCell);
     },
   },
 };

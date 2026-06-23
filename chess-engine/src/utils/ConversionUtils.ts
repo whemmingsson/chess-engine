@@ -1,3 +1,5 @@
+import { HistoryMove, MoveMetaData } from "../../../common/models/HistoryMove";
+import { Move } from "../../../common/models/Move";
 import { PieceColor } from "../../../common/models/Piece";
 import { Position } from "../types/Position";
 
@@ -19,4 +21,11 @@ export const toCell = (position: Position): string => {
 
 export const otherColor = (color: PieceColor): PieceColor => {
   return color === "White" ? "Black" : "White";
+};
+
+export const toHistoryMove = (
+  m: Move,
+  metadata?: MoveMetaData,
+): HistoryMove => {
+  return { ...m, metadata };
 };
