@@ -23,13 +23,19 @@ export class Engine {
   history: EnrichedMove[];
   colorToMove: PieceColor;
   constructor() {
-    console.log("Chess engine initialized");
-
     this.colorToMove = "White";
     this.board = {};
     this.history = [];
-
     this._initBoard();
+    console.log("Chess engine initialized");
+  }
+
+  _resetEngine() {
+    this.colorToMove = "White";
+    this.board = {};
+    this.history = [];
+    this._initBoard();
+    console.log("Chess engine initialized");
   }
 
   _initBoard() {
@@ -159,6 +165,19 @@ export class Engine {
     this.board[targetCell] = createNewPieceOfClass(pieceClass, pieceColor);
   }
 
+  _getValidTargetCellsForAll(color?: PieceColor) {
+    return Object.keys(this.board)
+      .filter((c) => this.board[c] !== null && this.board[c] !== undefined)
+      .filter((c) => this.board[c]?.color === color)
+      .flatMap((c) => {
+        return {
+          piece: this.board[c],
+          pieceCell: c,
+          targetCells: this.getValidPositionsForPiece(c),
+        };
+      });
+  }
+
   print() {
     console.log("Current board state: ", this.board);
     console.log(
@@ -250,6 +269,38 @@ export class Engine {
 
   getBoard() {
     return this.board;
+  }
+
+  resetGame() {
+    this._resetEngine();
+  }
+
+  getCellsThatTargetsCell(cell: string) {
+    const targetPiece = this.board[cell];
+
+    if (targetPiece) {
+      return this._getValidTargetCellsForAll(otherColor(targetPiece.color))
+        .filter((i) => i.targetCells.indexOf(cell) >= 0)
+        .map((i) => i.pieceCell);
+    }
+
+    // Inject a dummy pawn to act as "target"
+    this.board[cell] = createNewPieceOfClass("Pawn", "Black");
+
+    const whiteAttacks = this._getValidTargetCellsForAll("White")
+      .filter((i) => i.targetCells.indexOf(cell) >= 0)
+      .map((i) => i.pieceCell);
+
+    // Inject a dummy pawn to act as "target"
+    this.board[cell] = createNewPieceOfClass("Pawn", "White");
+
+    const blackAttacks = this._getValidTargetCellsForAll("Black")
+      .filter((i) => i.targetCells.indexOf(cell) >= 0)
+      .map((i) => i.pieceCell);
+
+    delete this.board[cell];
+
+    return [...whiteAttacks, ...blackAttacks];
   }
 }
 

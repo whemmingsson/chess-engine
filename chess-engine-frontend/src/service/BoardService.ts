@@ -19,6 +19,10 @@ export interface ValidTargetsResponse {
   targetCells: BoardCellKey[];
 }
 
+export interface TargetingCellsResponse {
+  cells: BoardCellKey[];
+}
+
 export interface MoveSuccessResponse {
   success: true;
   board: BoardMap;
@@ -50,6 +54,13 @@ export const BoardService = {
   async getValidTargets(source: BoardCellKey): Promise<ValidTargetsResponse> {
     const response = await api.get<ValidTargetsResponse>(
       `/valid-targets/${source}`,
+    );
+    return response.data;
+  },
+
+  async getTargetingCells(cell: BoardCellKey): Promise<TargetingCellsResponse> {
+    const response = await api.get<TargetingCellsResponse>(
+      `/targeting-cells/${cell}`,
     );
     return response.data;
   },

@@ -13,6 +13,7 @@ export const useBoard = () => {
   const [board, setBoard] = useState<BoardMap | null>(null);
   const [isLoadingBoard, setIsLoadingBoard] = useState(true);
   const [validTargetCells, setValidTargetCells] = useState<BoardCellKey[]>([]);
+  const [attackerCells, setAttackerCells] = useState<BoardCellKey[]>([]);
 
   const fetchBoard = useCallback(async () => {
     const boardResponse = await BoardService.getBoard();
@@ -49,8 +50,22 @@ export const useBoard = () => {
     }
   }, []);
 
+  const fetchTargetingCells = useCallback(async (cell: BoardCellKey) => {
+    try {
+      const response = await BoardService.getTargetingCells(cell);
+      setAttackerCells(response.cells);
+    } catch (error) {
+      console.error("Error fetching targeting cells:", error);
+      setAttackerCells([]);
+    }
+  }, []);
+
   const clearValidTargetCells = useCallback(() => {
     setValidTargetCells([]);
+  }, []);
+
+  const clearAttackerCells = useCallback(() => {
+    setAttackerCells([]);
   }, []);
 
   useEffect(() => {
@@ -73,7 +88,10 @@ export const useBoard = () => {
     submitMove,
     refreshBoard: fetchBoard,
     validTargetCells,
+    attackerCells,
     fetchValidTargetCells,
+    fetchTargetingCells,
     clearValidTargetCells,
+    clearAttackerCells,
   };
 };

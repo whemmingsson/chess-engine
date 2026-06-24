@@ -28,8 +28,11 @@ export const Board = () => {
     isLoadingBoard,
     submitMove,
     validTargetCells,
+    attackerCells,
     fetchValidTargetCells,
+    fetchTargetingCells,
     clearValidTargetCells,
+    clearAttackerCells,
   } = useBoard();
 
   const getPiece = React.useCallback(
@@ -51,9 +54,12 @@ export const Board = () => {
     if (!selectedFromCell) {
       const piece = getPiece(cellKey);
       if (!piece) {
+        clearValidTargetCells();
+        void fetchTargetingCells(cellKey);
         return;
       }
 
+      clearAttackerCells();
       setSelectedFromCell(cellKey);
       void fetchValidTargetCells(cellKey);
     } else {
@@ -65,6 +71,7 @@ export const Board = () => {
     setSelectedFromCell(null);
     setPendingPromotionMove(null);
     clearValidTargetCells();
+    clearAttackerCells();
   };
 
   const isPromotionTarget = (
@@ -89,6 +96,7 @@ export const Board = () => {
       alert(`No piece at ${sourceCell}`);
       setSelectedFromCell(null);
       clearValidTargetCells();
+      clearAttackerCells();
       return;
     }
 
@@ -170,6 +178,7 @@ export const Board = () => {
                       selectedFromCell === cellKey && styles.cellSelectedFrom,
                       validTargetCells.includes(cellKey) &&
                         styles.cellValidTarget,
+                      attackerCells.includes(cellKey) && styles.cellAttacker,
                     )}
                     onClick={() => {
                       handleCellClick(cellKey);

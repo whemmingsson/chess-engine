@@ -30,6 +30,13 @@ app.get("/valid-targets/:source", (req, res) => {
   res.status(200).json({ targetCells });
 });
 
+app.get("/targeting-cells/:cell", (req, res) => {
+  const { cell } = req.params;
+  const cells = engine.getCellsThatTargetsCell(cell);
+
+  res.status(200).json({ cells });
+});
+
 app.post("/move", (req, res) => {
   try {
     const move = req.body as Move;
