@@ -34,6 +34,7 @@ export interface MoveFailureResponse {
 }
 
 export type MoveResponse = MoveSuccessResponse | MoveFailureResponse;
+export type ResetResponse = MoveSuccessResponse;
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000",
@@ -62,6 +63,11 @@ export const BoardService = {
     const response = await api.get<TargetingCellsResponse>(
       `/targeting-cells/${cell}`,
     );
+    return response.data;
+  },
+
+  async reset(): Promise<ResetResponse> {
+    const response = await api.post<ResetResponse>("/reset");
     return response.data;
   },
 

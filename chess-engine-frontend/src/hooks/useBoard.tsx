@@ -40,6 +40,18 @@ export const useBoard = () => {
     [fetchBoard],
   );
 
+  const resetGame = useCallback(async (): Promise<SubmitMoveResult> => {
+    try {
+      await BoardService.reset();
+      await fetchBoard();
+      return { success: true };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to reset game";
+      return { success: false, message };
+    }
+  }, [fetchBoard]);
+
   const fetchValidTargetCells = useCallback(async (source: BoardCellKey) => {
     try {
       const response = await BoardService.getValidTargets(source);
@@ -86,6 +98,7 @@ export const useBoard = () => {
     board,
     isLoadingBoard,
     submitMove,
+    resetGame,
     refreshBoard: fetchBoard,
     validTargetCells,
     attackerCells,

@@ -27,6 +27,7 @@ export const Board = () => {
     board,
     isLoadingBoard,
     submitMove,
+    resetGame,
     validTargetCells,
     attackerCells,
     fetchValidTargetCells,
@@ -151,6 +152,24 @@ export const Board = () => {
     setPendingPromotionMove(null);
   };
 
+  const handleResetClick = async () => {
+    const shouldReset = window.confirm(
+      "Do you really want to reset the current game?",
+    );
+
+    if (!shouldReset) {
+      return;
+    }
+
+    const result = await resetGame();
+    if (!result.success) {
+      alert(result.message);
+      return;
+    }
+
+    handleClearClick();
+  };
+
   if (isLoadingBoard || !board) {
     return <div>Loading board...</div>;
   }
@@ -204,6 +223,11 @@ export const Board = () => {
           type="button"
           value={"Clear"}
           onClick={() => handleClearClick()}
+        />
+        <input
+          type="button"
+          value={"Reset"}
+          onClick={() => void handleResetClick()}
         />
       </div>
       {pendingPromotionMove && (

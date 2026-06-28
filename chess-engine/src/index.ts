@@ -37,6 +37,15 @@ app.get("/targeting-cells/:cell", (req, res) => {
   res.status(200).json({ cells });
 });
 
+app.post("/reset", (_req, res) => {
+  engine.resetGame();
+
+  res.status(200).json({
+    success: true,
+    board: engine.getBoard(),
+  });
+});
+
 app.post("/move", (req, res) => {
   try {
     const move = req.body as Move;
