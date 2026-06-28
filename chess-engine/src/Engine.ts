@@ -22,10 +22,12 @@ export class Engine {
   board: Record<string, Piece | null>;
   history: EnrichedMove[];
   colorToMove: PieceColor;
+  movedPieces: Set<string>;
   constructor() {
     this.colorToMove = "White";
     this.board = {};
     this.history = [];
+    this.movedPieces = new Set();
     this._initBoard();
     console.log("Chess engine initialized");
   }
@@ -34,6 +36,7 @@ export class Engine {
     this.colorToMove = "White";
     this.board = {};
     this.history = [];
+    this.movedPieces = new Set();
     this._initBoard();
     console.log("Chess engine initialized");
   }
@@ -162,7 +165,11 @@ export class Engine {
     pieceColor: PieceColor,
     targetCell: string,
   ) {
-    this.board[targetCell] = createNewPieceOfClass(pieceClass, pieceColor);
+    this.board[targetCell] = createNewPieceOfClass(
+      pieceClass,
+      pieceColor,
+      targetCell,
+    );
   }
 
   _getValidTargetCellsForAll(color?: PieceColor) {
@@ -176,6 +183,15 @@ export class Engine {
           targetCells: this.getValidPositionsForPiece(c),
         };
       });
+  }
+
+  _registerPieceAsMoved(piece: Piece) {
+    const pieceId = piece.id;
+    if (this.movedPieces.has(pieceId)) {
+      return;
+    }
+
+    this.movedPieces.add(pieceId);
   }
 
   print() {
@@ -220,7 +236,12 @@ export class Engine {
   canSpecificPieceMove(move: Move) {
     // This validate piece-specific rules
     const piece = this.getPieceAtCell(move.source)!;
-    return validators[piece.class](move, this.board, this.history);
+    return validators[piece.class](
+      move,
+      this.board,
+      this.history,
+      this.movedPieces,
+    );
   }
 
   movePiece(move: EnrichedMove) {
@@ -237,7 +258,8 @@ export class Engine {
       return;
     }
 
-    // Specific piece handling
+    const pieceMoving = this.board[move.source]!;
+
     if (this._isEnPassantMove(move)) {
       this._handleEnPassantMoveAndCapture(move);
       this.history.push(enrichMove(move, { enPassant: true }));
@@ -248,6 +270,8 @@ export class Engine {
       this._handleDefaultMove(move);
       this.history.push(move);
     }
+
+    this._registerPieceAsMoved(pieceMoving);
 
     this.colorToMove = otherColor(this.colorToMove);
   }
@@ -264,6 +288,7 @@ export class Engine {
       toPosition(source),
       this.board,
       this.history,
+      this.movedPieces,
     );
   }
 
@@ -285,14 +310,14 @@ export class Engine {
     }
 
     // Inject a dummy pawn to act as "target"
-    this.board[cell] = createNewPieceOfClass("Pawn", "Black");
+    this.board[cell] = createNewPieceOfClass("Pawn", "Black", cell);
 
     const whiteAttacks = this._getValidTargetCellsForAll("White")
       .filter((i) => i.targetCells.indexOf(cell) >= 0)
       .map((i) => i.pieceCell);
 
     // Inject a dummy pawn to act as "target"
-    this.board[cell] = createNewPieceOfClass("Pawn", "White");
+    this.board[cell] = createNewPieceOfClass("Pawn", "White", cell);
 
     const blackAttacks = this._getValidTargetCellsForAll("Black")
       .filter((i) => i.targetCells.indexOf(cell) >= 0)

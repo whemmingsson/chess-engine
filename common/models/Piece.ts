@@ -14,6 +14,7 @@ export interface Piece {
   class: PieceClass;
   color: PieceColor;
   shortClass: PieceShortClass;
+  id: string;
 }
 
 export const nameOf = (p: Piece) => {

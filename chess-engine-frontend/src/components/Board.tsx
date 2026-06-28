@@ -247,6 +247,7 @@ export const Board = () => {
                     src={getPieceSvg({
                       ...pieceDefinitionMap[pieceClass],
                       color: pendingPromotionMove.color,
+                      id: `${pendingPromotionMove.color[0]}${pieceDefinitionMap[pieceClass].shortClass}@${pendingPromotionMove.target}`,
                     })}
                     alt={pieceClass}
                   />

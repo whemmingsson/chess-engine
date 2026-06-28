@@ -1,9 +1,10 @@
 import type { Move } from "./Move";
-import type { PieceClass } from "./Piece";
+import type { Piece, PieceClass } from "./Piece";
 
 export type MoveMetaData = object & {
   enPassant?: boolean;
   promoteTo?: PieceClass;
+  pieceMoved?: Piece;
 };
 
 export interface EnrichedMove extends Move {

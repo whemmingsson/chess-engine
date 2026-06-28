@@ -5,7 +5,12 @@ import { PieceClass } from "../../common/models/Piece";
 import { Move } from "../../common/models/Move";
 
 type TargetCellGenerator = {
-  generate: (source: Position, board: Board, history?: Move[]) => string[];
+  generate: (
+    source: Position,
+    board: Board,
+    history?: Move[],
+    movedPieces?: Set<string>,
+  ) => string[];
 };
 
 // Utilities
@@ -279,7 +284,7 @@ const generateValidPawnPositions = (
 
 export const generators: Record<PieceClass, TargetCellGenerator> = {
   King: {
-    generate: (source: Position, board: Board): string[] => {
+    generate: (source: Position, board: Board, _, movedPieces): string[] => {
       const positions: Position[] = [
         { column: source.column - 1, row: source.row - 1 },
         { column: source.column - 1, row: source.row },
@@ -290,6 +295,8 @@ export const generators: Record<PieceClass, TargetCellGenerator> = {
         { column: source.column + 1, row: source.row },
         { column: source.column + 1, row: source.row + 1 },
       ];
+
+      console.log("Moved pieces:", movedPieces);
 
       return positions
         .map(toCell)

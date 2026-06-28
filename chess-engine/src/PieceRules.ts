@@ -8,6 +8,7 @@ type pieceMoveValidatorFunc = (
   move: Move,
   board: Board,
   history?: Move[],
+  movedPieces?: Set<string>,
 ) => boolean;
 
 export type validatorsType = Record<PieceClass, pieceMoveValidatorFunc>;
@@ -17,6 +18,7 @@ const validateMoveFor = (
   move: Move,
   board: Board,
   history?: Move[],
+  movedPieces?: Set<string>,
 ) => {
   const { source, target } = move;
 
@@ -24,6 +26,7 @@ const validateMoveFor = (
     toPosition(source),
     board,
     history,
+    movedPieces,
   );
 
   const isValidMove = targetCells.some((p) => p === target);
@@ -43,8 +46,8 @@ export const validators: validatorsType = {
   Rook: (m, b) => {
     return validateMoveFor("Rook", m, b);
   },
-  King: (m, b) => {
-    return validateMoveFor("King", m, b);
+  King: (m, b, _, r) => {
+    return validateMoveFor("King", m, b, _, r);
   },
   Queen: (m, b) => {
     return validateMoveFor("Queen", m, b);
