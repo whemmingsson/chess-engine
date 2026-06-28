@@ -3,6 +3,8 @@ import { Position } from "./types/Position";
 import { otherColor, toCell, toPosition } from "./utils/ConversionUtils";
 import { PieceClass } from "../../common/models/Piece";
 import { Move } from "../../common/models/Move";
+import { hasPieceMoved } from "../../common/utils/MovedPiecesUtils";
+import { areCellsTargeted, PieceTargets } from "./types/PieceTargets";
 
 type TargetCellGenerator = {
   generate: (
@@ -10,6 +12,7 @@ type TargetCellGenerator = {
     board: Board,
     history?: Move[],
     movedPieces?: Set<string>,
+    targetedCells?: PieceTargets[],
   ) => string[];
 };
 
@@ -282,9 +285,20 @@ const generateValidPawnPositions = (
   return possiblePositions;
 };
 
+const outOfBounds = (p: Position) => {
+  return p.row < 1 || p.row > 8 || p.column < 1 || p.column > 8;
+};
+
 export const generators: Record<PieceClass, TargetCellGenerator> = {
   King: {
-    generate: (source: Position, board: Board, _, movedPieces): string[] => {
+    generate: (
+      source: Position,
+      board: Board,
+      _,
+      movedPieces,
+      targetedCells,
+    ): string[] => {
+      // Standard positions
       const positions: Position[] = [
         { column: source.column - 1, row: source.row - 1 },
         { column: source.column - 1, row: source.row },
@@ -294,17 +308,61 @@ export const generators: Record<PieceClass, TargetCellGenerator> = {
         { column: source.column + 1, row: source.row - 1 },
         { column: source.column + 1, row: source.row },
         { column: source.column + 1, row: source.row + 1 },
-      ];
+      ].filter((p) => !outOfBounds(p));
 
-      console.log("Moved pieces:", movedPieces);
-
-      return positions
+      const filteredPositions = positions
         .map(toCell)
         .filter(
           (c) =>
             (board[c] && board[c].color !== board[toCell(source)]!.color) ||
             !board[c],
         );
+
+      // Castling
+      if (hasPieceMoved(board[toCell(source)]!, movedPieces)) {
+        return filteredPositions;
+      }
+
+      const canCastle = (
+        rookCol: number,
+        safeCols: number[],
+        emptyCols: number[],
+      ) => {
+        const { row } = source;
+        const rookPos = { row: source.row, column: rookCol };
+        const rookCell = toCell(rookPos);
+        const cellsToBeSafe = [
+          source,
+          ...safeCols.map((c) => {
+            return { row, column: c };
+          }),
+        ].map(toCell);
+        const cellsToBeEmpty = [
+          ...emptyCols.map((c) => {
+            return { row, column: c };
+          }),
+        ].map(toCell);
+
+        return (
+          board[rookCell] &&
+          board[rookCell].class === "Rook" &&
+          !hasPieceMoved(board[rookCell], movedPieces) &&
+          cellsToBeEmpty.every((c) => !board[c]) &&
+          !areCellsTargeted(targetedCells, cellsToBeSafe)
+        );
+      };
+
+      // Kingside
+      if (canCastle(8, [6, 7], [6, 7])) {
+        filteredPositions.push(toCell({ row: source.row, column: 7 }));
+      }
+
+      // Queenside
+      if (canCastle(1, [3, 4], [2, 3, 4])) {
+        filteredPositions.push(toCell({ row: source.row, column: 3 }));
+      }
+
+      return filteredPositions;
     },
   },
   Queen: {
@@ -331,7 +389,7 @@ export const generators: Record<PieceClass, TargetCellGenerator> = {
         { column: source.column - 2, row: source.row + 1 },
         { column: source.column + 2, row: source.row - 1 },
         { column: source.column + 2, row: source.row + 1 },
-      ];
+      ].filter((p) => !outOfBounds(p));
 
       return positions
         .map(toCell)
@@ -354,13 +412,7 @@ export const generators: Record<PieceClass, TargetCellGenerator> = {
         source,
         history?.at(history.length - 1),
       )
-        .filter(
-          (position) =>
-            position.row >= 1 &&
-            position.row <= 8 &&
-            position.column >= 1 &&
-            position.column <= 8,
-        )
+        .filter((p) => !outOfBounds(p))
         .map(toCell);
     },
   },

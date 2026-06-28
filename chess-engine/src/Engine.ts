@@ -9,6 +9,7 @@ import {
 } from "../../common/models/Piece";
 import { config } from "./config/config";
 import { validators } from "./PieceRules";
+import { PieceTargets } from "./types/PieceTargets";
 import {
   otherColor,
   toCell,
@@ -23,12 +24,18 @@ export class Engine {
   history: EnrichedMove[];
   colorToMove: PieceColor;
   movedPieces: Set<string>;
+  targetedCellsByColor: Record<PieceColor, PieceTargets[]>;
   constructor() {
     this.colorToMove = "White";
     this.board = {};
     this.history = [];
     this.movedPieces = new Set();
+    this.targetedCellsByColor = {
+      White: [],
+      Black: [],
+    };
     this._initBoard();
+    this._updateTargetedCellsByColor();
     console.log("Chess engine initialized");
   }
 
@@ -37,7 +44,12 @@ export class Engine {
     this.board = {};
     this.history = [];
     this.movedPieces = new Set();
+    this.targetedCellsByColor = {
+      White: [],
+      Black: [],
+    };
     this._initBoard();
+    this._updateTargetedCellsByColor();
     console.log("Chess engine initialized");
   }
 
@@ -172,17 +184,29 @@ export class Engine {
     );
   }
 
-  _getValidTargetCellsForAll(color?: PieceColor) {
+  _getValidTargetCellsForAll(color?: PieceColor): PieceTargets[] {
     return Object.keys(this.board)
       .filter((c) => this.board[c] !== null && this.board[c] !== undefined)
       .filter((c) => this.board[c]?.color === color)
       .flatMap((c) => {
+        const piece = this.board[c]!;
+
         return {
-          piece: this.board[c],
+          piece,
           pieceCell: c,
-          targetCells: this.getValidPositionsForPiece(c),
+          targetCells: generators[piece.class].generate(
+            toPosition(c),
+            this.board,
+            this.history,
+            this.movedPieces,
+          ),
         };
       });
+  }
+
+  _updateTargetedCellsByColor() {
+    this.targetedCellsByColor.White = this._getValidTargetCellsForAll("White");
+    this.targetedCellsByColor.Black = this._getValidTargetCellsForAll("Black");
   }
 
   _registerPieceAsMoved(piece: Piece) {
@@ -236,11 +260,18 @@ export class Engine {
   canSpecificPieceMove(move: Move) {
     // This validate piece-specific rules
     const piece = this.getPieceAtCell(move.source)!;
+
+    const targetedCells =
+      piece.class === "King"
+        ? this.targetedCellsByColor[otherColor(piece.color)]
+        : [];
+
     return validators[piece.class](
       move,
       this.board,
       this.history,
       this.movedPieces,
+      targetedCells,
     );
   }
 
@@ -273,6 +304,8 @@ export class Engine {
 
     this._registerPieceAsMoved(pieceMoving);
 
+    this._updateTargetedCellsByColor();
+
     this.colorToMove = otherColor(this.colorToMove);
   }
 
@@ -284,11 +317,17 @@ export class Engine {
       return [];
     }
 
+    const targetedCells =
+      piece.class === "King"
+        ? this.targetedCellsByColor[otherColor(piece.color)]
+        : [];
+
     return generators[piece.class].generate(
       toPosition(source),
       this.board,
       this.history,
       this.movedPieces,
+      targetedCells,
     );
   }
 

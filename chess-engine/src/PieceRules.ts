@@ -1,6 +1,7 @@
 import { Move } from "../../common/models/Move";
 import { PieceClass } from "../../common/models/Piece";
 import { Board } from "./types/Board";
+import { PieceTargets } from "./types/PieceTargets";
 import { toPosition } from "./utils/ConversionUtils";
 import { generators } from "./ValidTargetCellsGenerators";
 
@@ -9,6 +10,7 @@ type pieceMoveValidatorFunc = (
   board: Board,
   history?: Move[],
   movedPieces?: Set<string>,
+  targetedCells?: PieceTargets[],
 ) => boolean;
 
 export type validatorsType = Record<PieceClass, pieceMoveValidatorFunc>;
@@ -19,6 +21,7 @@ const validateMoveFor = (
   board: Board,
   history?: Move[],
   movedPieces?: Set<string>,
+  targetedCells?: PieceTargets[],
 ) => {
   const { source, target } = move;
 
@@ -27,6 +30,7 @@ const validateMoveFor = (
     board,
     history,
     movedPieces,
+    targetedCells,
   );
 
   const isValidMove = targetCells.some((p) => p === target);
@@ -46,8 +50,8 @@ export const validators: validatorsType = {
   Rook: (m, b) => {
     return validateMoveFor("Rook", m, b);
   },
-  King: (m, b, _, r) => {
-    return validateMoveFor("King", m, b, _, r);
+  King: (m, b, _, r, t) => {
+    return validateMoveFor("King", m, b, _, r, t);
   },
   Queen: (m, b) => {
     return validateMoveFor("Queen", m, b);
