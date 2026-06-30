@@ -3,6 +3,8 @@ import type { Piece, PieceClass } from "./Piece";
 
 export type MoveMetaData = object & {
   enPassant?: boolean;
+  casteling?: boolean;
+  casteledRook?: Piece;
   promoteTo?: PieceClass;
   pieceMoved?: Piece;
 };

@@ -53,7 +53,7 @@ export class Engine {
     console.log("Chess engine initialized");
   }
 
-  _initBoard() {
+  private _initBoard() {
     for (let i = 8; i >= 1; i--) {
       for (let j = 0; j < 8; j++) {
         const cellColLetter = String.fromCharCode(j + 65);
@@ -65,7 +65,7 @@ export class Engine {
     }
   }
 
-  _isMoveObjectValid(move: Move) {
+  private _isMoveObjectValid(move: Move) {
     if (!move.source) {
       throw Error("Source cell not provided");
     }
@@ -92,11 +92,11 @@ export class Engine {
     return true;
   }
 
-  _isPieceClassAt(pc: PieceClass, cell: string) {
+  private _isPieceClassAt(pc: PieceClass, cell: string) {
     return this.board[cell]?.class === pc;
   }
 
-  _isEnPassantMove(move: Move) {
+  private _isEnPassantMove(move: Move) {
     if (!this._isPieceClassAt("Pawn", move.source)) {
       return false;
     }
@@ -115,7 +115,7 @@ export class Engine {
     return isTargetEmpty;
   }
 
-  _handleEnPassantMoveAndCapture(move: Move) {
+  private _handleEnPassantMoveAndCapture(move: Move) {
     const pawnToMove = this.getPieceAtCell(move.source)!;
 
     const targetPosition = toPosition(move.target);
@@ -129,12 +129,12 @@ export class Engine {
     delete this.board[move.source];
   }
 
-  _handleDefaultMove(move: Move) {
+  private _handleDefaultMove(move: Move) {
     this.board[move.target] = this.getPieceAtCell(move.source);
     delete this.board[move.source];
   }
 
-  _isPromotionMove(move: Move) {
+  private _isPromotionMove(move: Move) {
     if (!this._isPieceClassAt("Pawn", move.source)) {
       return false;
     }
@@ -144,7 +144,7 @@ export class Engine {
     return targetPosition.row === 1 || targetPosition.row === 8;
   }
 
-  _handlePromotionMove(move: EnrichedMove) {
+  private _handlePromotionMove(move: EnrichedMove) {
     const pawnToPromote = this.board[move.source]!;
 
     if (config.engine.autoPromoteToQueen) {
@@ -172,7 +172,7 @@ export class Engine {
     delete this.board[move.source];
   }
 
-  _promoteToPieceAt(
+  private _promoteToPieceAt(
     pieceClass: PieceClass,
     pieceColor: PieceColor,
     targetCell: string,
@@ -184,7 +184,52 @@ export class Engine {
     );
   }
 
-  _getValidTargetCellsForAll(color?: PieceColor): PieceTargets[] {
+  private _isCastelingMove(move: EnrichedMove) {
+    const movingPiece = this.board[move.source];
+    if (!movingPiece) {
+      return false;
+    }
+
+    if (movingPiece.class !== "King") {
+      return false;
+    }
+
+    const sourcePos = toPosition(move.source);
+    const targetPos = toPosition(move.target);
+
+    if (sourcePos.row !== targetPos.row) {
+      return false;
+    }
+
+    const moveLength = Math.abs(sourcePos.column - targetPos.column);
+
+    return moveLength === 2;
+  }
+
+  private _handleCastelingMove(move: EnrichedMove): Piece {
+    const sourcePos = toPosition(move.source);
+    const targetPos = toPosition(move.target);
+
+    const isKingSide = targetPos.column > sourcePos.column; // Oterwise queenside, obviously
+
+    const rookPosition = { row: sourcePos.row, column: isKingSide ? 8 : 1 };
+    const rook = this.board[toCell(rookPosition)]!;
+
+    const newRookPosition = {
+      row: sourcePos.row,
+      column: isKingSide ? targetPos.column - 1 : targetPos.column + 1,
+    };
+
+    this.board[toCell(targetPos)] = this.getPieceAtCell(move.source);
+    this.board[toCell(newRookPosition)] = rook;
+
+    delete this.board[toCell(rookPosition)];
+    delete this.board[move.source];
+
+    return rook;
+  }
+
+  private _getValidTargetCellsForAll(color?: PieceColor): PieceTargets[] {
     return Object.keys(this.board)
       .filter((c) => this.board[c] !== null && this.board[c] !== undefined)
       .filter((c) => this.board[c]?.color === color)
@@ -204,12 +249,12 @@ export class Engine {
       });
   }
 
-  _updateTargetedCellsByColor() {
+  private _updateTargetedCellsByColor() {
     this.targetedCellsByColor.White = this._getValidTargetCellsForAll("White");
     this.targetedCellsByColor.Black = this._getValidTargetCellsForAll("Black");
   }
 
-  _registerPieceAsMoved(piece: Piece) {
+  private _registerPieceAsMoved(piece: Piece) {
     const pieceId = piece.id;
     if (this.movedPieces.has(pieceId)) {
       return;
@@ -297,6 +342,10 @@ export class Engine {
     } else if (this._isPromotionMove(move)) {
       this._handlePromotionMove(move);
       this.history.push(move);
+    } else if (this._isCastelingMove(move)) {
+      const casteledRook = this._handleCastelingMove(move);
+      this.history.push(enrichMove(move, { casteling: true, casteledRook }));
+      this._registerPieceAsMoved(casteledRook);
     } else {
       this._handleDefaultMove(move);
       this.history.push(move);
