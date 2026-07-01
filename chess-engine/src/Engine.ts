@@ -303,18 +303,27 @@ export class Engine {
     this.movedPieces.add(pieceId);
   }
 
-  private _isKingInCheck() {
-    const targetedKingPieces = this.targetedCellsByColor[this.colorToMove]
+  private _isKingInCheck(pieceTargets?: PieceTargets[]) {
+    const targetedCells =
+      pieceTargets && pieceTargets.length > 0
+        ? pieceTargets
+        : this.targetedCellsByColor[this.colorToMove];
+
+    const targetedKingPieces = targetedCells
       .flatMap((i) => i.targetCells)
       .map((c) => (this.board[c] ? (this.board[c] as Piece) : null))
       .filter((c) => c && c.class === "King");
     return targetedKingPieces.length >= 1;
   }
 
-  private _getAllValidTargets(source: string, piece: Piece) {
+  private _getAllValidTargets(move: EnrichedMove) {
+    const { source } = move;
+    const piece = this._getPieceAtCell(source)!;
+
     console.log(
       `[ENGINE] Calculating new valid targets for ${nameOf(piece)} at ${source}`,
     );
+
     const validTargetCells = generators[piece.class].generate(
       toPosition(source),
       this.board,
@@ -323,9 +332,41 @@ export class Engine {
       this.targetedCellsByColor[otherColor(piece.color)],
     );
 
-    // TOOD: Add check-logic
+    if (!this.isCheckColor) {
+      return validTargetCells;
+    }
 
-    return validTargetCells;
+    const moveResolvesCheck = (target: string) => {
+      console.log(
+        `[ENGINE] Checking if moving ${nameOf(piece)} to target ${target} resolved the check..`,
+      );
+      // Perform the most hacky solution to date - move the piece and see if the king is still in check!
+      // NOTE: There might be a situation where an en-passant or promotion would resolve the check. Lets come back to this. Right now the engine cannot resolve this with the current algorithm.
+
+      // Perform the move
+      const capturedPiece = this._getPieceAtCell(target);
+      this.board[target] = piece;
+      delete this.board[source];
+
+      // Calculate the new targets
+      const targeted = this._getValidTargetCellsForAll(otherColor(piece.color));
+      const isKingStillChecked = this._isKingInCheck(targeted);
+
+      // RESET! SUPER IMPORTANT!
+      if (capturedPiece) {
+        this.board[target] = capturedPiece;
+      } else {
+        delete this.board[target];
+      }
+
+      this.board[source] = piece;
+
+      console.log(`[ENGINE] Is king still in check? ${isKingStillChecked}`);
+
+      return !isKingStillChecked;
+    };
+
+    return validTargetCells.filter(moveResolvesCheck);
   }
 
   private _classifyMove(move: EnrichedMove): MoveClass {
@@ -377,7 +418,7 @@ export class Engine {
     const allValidTargets =
       this.validMovesCache && this.validMovesCache.length > 0
         ? this.validMovesCache
-        : this._getAllValidTargets(move.source, piece);
+        : this._getAllValidTargets(move);
 
     const isValidMove = allValidTargets.some((p) => p === target);
 
@@ -453,7 +494,7 @@ export class Engine {
       return [];
     }
 
-    const validTargets = this._getAllValidTargets(source, piece);
+    const validTargets = this._getAllValidTargets({ source, target: "" }); // TODO: How to fix this ugly crap?
 
     this.validMovesCache = validTargets;
 
@@ -469,7 +510,7 @@ export class Engine {
   }
 
   getCellsThatTargetsCell(cell: string) {
-    const targetPiece = this.board[cell];
+    const targetPiece = this._getPieceAtCell(cell);
 
     if (targetPiece) {
       return this._getValidTargetCellsForAll(otherColor(targetPiece.color))
@@ -478,20 +519,20 @@ export class Engine {
     }
 
     // Inject a dummy pawn to act as "target"
-    this.board[cell] = createNewPieceOfClass("Pawn", "Black", cell);
+    this._setAt(createNewPieceOfClass("Pawn", "Black", cell), cell);
 
     const whiteAttacks = this._getValidTargetCellsForAll("White")
       .filter((i) => i.targetCells.indexOf(cell) >= 0)
       .map((i) => i.pieceCell);
 
     // Inject a dummy pawn to act as "target"
-    this.board[cell] = createNewPieceOfClass("Pawn", "White", cell);
+    this._setAt(createNewPieceOfClass("Pawn", "White", cell), cell);
 
     const blackAttacks = this._getValidTargetCellsForAll("Black")
       .filter((i) => i.targetCells.indexOf(cell) >= 0)
       .map((i) => i.pieceCell);
 
-    delete this.board[cell];
+    this._deleteAt(cell);
 
     return [...whiteAttacks, ...blackAttacks];
   }
