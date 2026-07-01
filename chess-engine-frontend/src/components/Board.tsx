@@ -62,8 +62,38 @@ export const Board = () => {
 
       clearAttackerCells();
       setSelectedFromCell(cellKey);
-      void fetchValidTargetCells(cellKey);
+      void (async () => {
+        const targetCells = await fetchValidTargetCells(cellKey);
+        if (targetCells.length === 0) {
+          setSelectedFromCell(null);
+        }
+      })();
     } else {
+      const sourcePiece = getPiece(selectedFromCell);
+      const targetPiece = getPiece(cellKey);
+
+      if (cellKey === selectedFromCell) {
+        handleClearClick();
+        return;
+      }
+
+      if (
+        sourcePiece &&
+        targetPiece &&
+        sourcePiece.color === targetPiece.color
+      ) {
+        clearValidTargetCells();
+        clearAttackerCells();
+        setSelectedFromCell(cellKey);
+        void (async () => {
+          const targetCells = await fetchValidTargetCells(cellKey);
+          if (targetCells.length === 0) {
+            setSelectedFromCell(null);
+          }
+        })();
+        return;
+      }
+
       void handleSubmitMove(selectedFromCell, cellKey);
     }
   };

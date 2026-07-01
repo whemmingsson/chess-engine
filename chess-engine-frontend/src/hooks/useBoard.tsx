@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Move } from "../../../common/models/Move";
+import { toast } from "react-toastify";
 import {
   BoardService,
   type BoardMap,
@@ -56,9 +57,16 @@ export const useBoard = () => {
     try {
       const response = await BoardService.getValidTargets(source);
       setValidTargetCells(response.targetCells);
+
+      if (response.targetCells.length === 0) {
+        toast.info("This piece cannot move.");
+      }
+
+      return response.targetCells;
     } catch (error) {
       console.error("Error fetching valid target cells:", error);
       setValidTargetCells([]);
+      return [] as BoardCellKey[];
     }
   }, []);
 
