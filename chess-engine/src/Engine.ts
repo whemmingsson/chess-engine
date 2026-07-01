@@ -27,6 +27,7 @@ export class Engine {
   movedPieces: Set<string>;
   targetedCellsByColor: Record<PieceColor, PieceTargets[]>;
   isCheckColor?: PieceColor; // Set to the color of the king currently under threat
+  validMovesCache?: string[]; // Contains the previosly calculated valid move targets
   constructor() {
     this.colorToMove = "White";
     this.board = {};
@@ -38,9 +39,12 @@ export class Engine {
     };
     this._initBoard();
     this._updateTargetedCellsByColor();
-    this.isCheckColor = undefined;
-    console.log("Chess engine initialized");
+    console.log("[ENGINE] Chess engine initialized");
   }
+
+  /* -------------------------------------------------------------- */
+  /* ------------------------- INTERNALS -------------------------- */
+  /* -------------------------------------------------------------- */
 
   _resetEngine() {
     this.colorToMove = "White";
@@ -54,12 +58,9 @@ export class Engine {
     this._initBoard();
     this._updateTargetedCellsByColor();
     this.isCheckColor = undefined;
-    console.log("Chess engine initialized");
+    this.validMovesCache = undefined;
+    console.log("[ENGINE] Chess engine re-initialized");
   }
-
-  /* -------------------------------------------------------------- */
-  /* ------------------------- INTERNALS -------------------------- */
-  /* -------------------------------------------------------------- */
 
   private _initBoard() {
     for (let i = 8; i >= 1; i--) {
@@ -310,7 +311,10 @@ export class Engine {
     return targetedKingPieces.length >= 1;
   }
 
-  _getAllValidTargets(source: string, piece: Piece) {
+  private _getAllValidTargets(source: string, piece: Piece) {
+    console.log(
+      `[ENGINE] Calculating new valid targets for ${nameOf(piece)} at ${source}`,
+    );
     const validTargetCells = generators[piece.class].generate(
       toPosition(source),
       this.board,
@@ -370,7 +374,10 @@ export class Engine {
   private _canSpecificPieceMove(move: Move) {
     const { target } = move;
     const piece = this._getPieceAtCell(move.source)!;
-    const allValidTargets = this._getAllValidTargets(move.source, piece);
+    const allValidTargets =
+      this.validMovesCache && this.validMovesCache.length > 0
+        ? this.validMovesCache
+        : this._getAllValidTargets(move.source, piece);
 
     const isValidMove = allValidTargets.some((p) => p === target);
 
@@ -395,14 +402,17 @@ export class Engine {
 
   movePiece(move: EnrichedMove) {
     if (!this._isMoveObjectValid(move)) {
+      this.validMovesCache = [];
       return;
     }
 
     if (!this._canPieceMove(move)) {
+      this.validMovesCache = [];
       return;
     }
 
     if (!this._canSpecificPieceMove(move)) {
+      this.validMovesCache = [];
       return;
     }
 
@@ -432,16 +442,22 @@ export class Engine {
     }
 
     this.colorToMove = otherColor(this.colorToMove);
+    this.validMovesCache = [];
   }
 
   getValidPositionsForPiece(source: string) {
     const piece = this._getPieceAtCell(source);
 
     if (!piece) {
+      this.validMovesCache = [];
       return [];
     }
 
-    return this._getAllValidTargets(source, piece);
+    const validTargets = this._getAllValidTargets(source, piece);
+
+    this.validMovesCache = validTargets;
+
+    return validTargets;
   }
 
   getBoard() {

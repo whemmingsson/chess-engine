@@ -65,5 +65,5 @@ app.post("/move", (req, res) => {
 });
 
 app.listen(config.server.port, () => {
-  console.log(`API server listening on port ${config.server.port}`);
+  console.log(`[REST API] API server listening on port ${config.server.port}`);
 });
