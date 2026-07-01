@@ -9,7 +9,9 @@ import {
 } from "../../common/models/Piece";
 import { config } from "./config/config";
 import { validators } from "./PieceRules";
+import { MoveClass } from "./types/MoveClass";
 import { PieceTargets } from "./types/PieceTargets";
+import { Position } from "./types/Position";
 import {
   otherColor,
   toCell,
@@ -116,7 +118,7 @@ export class Engine {
   }
 
   private _handleEnPassantMoveAndCapture(move: Move) {
-    const pawnToMove = this.getPieceAtCell(move.source)!;
+    const pawnToMove = this._getPieceAtCell(move.source)!;
 
     const targetPosition = toPosition(move.target);
     const positionToClear = {
@@ -124,14 +126,17 @@ export class Engine {
       row: targetPosition.row + (pawnToMove.color === "White" ? -1 : 1),
     };
 
-    this.board[move.target] = pawnToMove;
-    delete this.board[toCell(positionToClear)];
-    delete this.board[move.source];
+    this._setAt(pawnToMove, move.target);
+    this._deleteAtPos(positionToClear);
+    this._deleteAt(move.source);
+
+    this.history.push(enrichMove(move, { enPassant: true }));
   }
 
   private _handleDefaultMove(move: Move) {
-    this.board[move.target] = this.getPieceAtCell(move.source);
-    delete this.board[move.source];
+    this._setAt(this._getPieceAtCell(move.source)!, move.target);
+    this._deleteAt(move.source);
+    this.history.push(move);
   }
 
   private _isPromotionMove(move: Move) {
@@ -149,7 +154,7 @@ export class Engine {
 
     if (config.engine.autoPromoteToQueen) {
       this._promoteToPieceAt("Queen", pawnToPromote.color, move.target);
-      delete this.board[move.source];
+      this._deleteAt(move.source);
       return;
     }
 
@@ -169,7 +174,9 @@ export class Engine {
       move.target,
     );
 
-    delete this.board[move.source];
+    this._deleteAt(move.source);
+
+    this.history.push(move);
   }
 
   private _promoteToPieceAt(
@@ -210,7 +217,7 @@ export class Engine {
     const sourcePos = toPosition(move.source);
     const targetPos = toPosition(move.target);
 
-    const isKingSide = targetPos.column > sourcePos.column; // Oterwise queenside, obviously
+    const isKingSide = targetPos.column > sourcePos.column;
 
     const rookPosition = { row: sourcePos.row, column: isKingSide ? 8 : 1 };
     const rook = this.board[toCell(rookPosition)]!;
@@ -220,11 +227,17 @@ export class Engine {
       column: isKingSide ? targetPos.column - 1 : targetPos.column + 1,
     };
 
-    this.board[toCell(targetPos)] = this.getPieceAtCell(move.source);
-    this.board[toCell(newRookPosition)] = rook;
+    this._setAt(this._getPieceAtCell(move.source)!, move.target);
+    this._setAtPos(rook, newRookPosition);
 
-    delete this.board[toCell(rookPosition)];
-    delete this.board[move.source];
+    this._deleteAt(move.source);
+    this._deleteAtPos(rookPosition);
+
+    this.history.push(
+      enrichMove(move, { casteling: true, casteledRook: rook }),
+    );
+
+    this._registerPieceAsMoved(rook);
 
     return rook;
   }
@@ -263,6 +276,26 @@ export class Engine {
     this.movedPieces.add(pieceId);
   }
 
+  private _getPieceAtCell(cellKey: string): Piece | null {
+    return this.board[cellKey] || null;
+  }
+
+  private _deleteAtPos(pos: Position) {
+    delete this.board[toCell(pos)];
+  }
+
+  private _deleteAt(cell: string) {
+    delete this.board[cell];
+  }
+
+  private _setAtPos(piece: Piece, pos: Position) {
+    this.board[toCell(pos)] = piece;
+  }
+
+  private _setAt(piece: Piece, cell: string) {
+    this.board[cell] = piece;
+  }
+
   print() {
     console.log("Current board state: ", this.board);
     console.log(
@@ -271,14 +304,10 @@ export class Engine {
     );
   }
 
-  getPieceAtCell(cellKey: string): Piece | null {
-    return this.board[cellKey] || null;
-  }
-
   canPieceMove(move: Move) {
     /* This method does the trivial checks that are piece agnostic*/
 
-    const piece = this.getPieceAtCell(move.source);
+    const piece = this._getPieceAtCell(move.source);
 
     // No piece violation test
     if (!piece) {
@@ -290,7 +319,7 @@ export class Engine {
       throw Error(`It is ${this.colorToMove}'s turn to move`);
     }
 
-    const pieceAtTargetCell = this.getPieceAtCell(move.target);
+    const pieceAtTargetCell = this._getPieceAtCell(move.target);
 
     // Target piece of same color violation test
     if (pieceAtTargetCell && pieceAtTargetCell.color === piece.color) {
@@ -304,7 +333,7 @@ export class Engine {
 
   canSpecificPieceMove(move: Move) {
     // This validate piece-specific rules
-    const piece = this.getPieceAtCell(move.source)!;
+    const piece = this._getPieceAtCell(move.source)!;
 
     const targetedCells =
       piece.class === "King"
@@ -318,6 +347,22 @@ export class Engine {
       this.movedPieces,
       targetedCells,
     );
+  }
+
+  private _classifyMove(move: EnrichedMove): MoveClass {
+    if (this._isEnPassantMove(move)) {
+      return "EnPassant";
+    }
+
+    if (this._isPromotionMove(move)) {
+      return "Promotion";
+    }
+
+    if (this._isCastelingMove(move)) {
+      return "Casteling";
+    }
+
+    return "Default";
   }
 
   movePiece(move: EnrichedMove) {
@@ -336,30 +381,27 @@ export class Engine {
 
     const pieceMoving = this.board[move.source]!;
 
-    if (this._isEnPassantMove(move)) {
-      this._handleEnPassantMoveAndCapture(move);
-      this.history.push(enrichMove(move, { enPassant: true }));
-    } else if (this._isPromotionMove(move)) {
-      this._handlePromotionMove(move);
-      this.history.push(move);
-    } else if (this._isCastelingMove(move)) {
-      const casteledRook = this._handleCastelingMove(move);
-      this.history.push(enrichMove(move, { casteling: true, casteledRook }));
-      this._registerPieceAsMoved(casteledRook);
-    } else {
-      this._handleDefaultMove(move);
-      this.history.push(move);
+    switch (this._classifyMove(move)) {
+      case "EnPassant":
+        this._handleEnPassantMoveAndCapture(move);
+        break;
+      case "Promotion":
+        this._handlePromotionMove(move);
+        break;
+      case "Casteling":
+        this._handleCastelingMove(move);
+        break;
+      default:
+        this._handleDefaultMove(move);
     }
 
     this._registerPieceAsMoved(pieceMoving);
-
     this._updateTargetedCellsByColor();
-
     this.colorToMove = otherColor(this.colorToMove);
   }
 
   getValidPositionsForPiece(source: string) {
-    const piece = this.getPieceAtCell(source);
+    const piece = this._getPieceAtCell(source);
 
     // No piece violation test
     if (!piece) {
