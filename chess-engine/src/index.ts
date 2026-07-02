@@ -3,9 +3,10 @@ import cors from "cors";
 import { Engine, type EngineInstance } from "./Engine";
 import type { Move } from "../../common/models/Move";
 import { config } from "./config/config";
+import { getPreset, getPresetKeys } from "./EnginePresets";
 
 const app = express();
-const engine: EngineInstance = new Engine();
+let engine: EngineInstance = new Engine();
 
 app.use(
   cors({
@@ -43,6 +44,33 @@ app.post("/reset", (_req, res) => {
   res.status(200).json({
     success: true,
     board: engine.getBoard(),
+  });
+});
+
+app.post("/preset", (_req, res) => {
+  const presetKey = _req.query.presetKey;
+  const presetKeys = getPresetKeys();
+
+  if (typeof presetKey !== "string" || !presetKeys.includes(presetKey)) {
+    res.status(400).json({
+      success: false,
+      message: `Invalid presetKey. Valid keys: ${presetKeys.join(", ")}`,
+    });
+    return;
+  }
+
+  const newEngine = getPreset(presetKey as Parameters<typeof getPreset>[0]);
+  engine = newEngine;
+
+  res.status(200).json({
+    success: true,
+    board: engine.getBoard(),
+  });
+});
+
+app.get("/preset-keys", (_req, res) => {
+  res.status(200).json({
+    presetKeys: getPresetKeys(),
   });
 });
 

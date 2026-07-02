@@ -13,6 +13,7 @@ type SubmitMoveResult = { success: true } | { success: false; message: string };
 export const useBoard = () => {
   const [board, setBoard] = useState<BoardMap | null>(null);
   const [isLoadingBoard, setIsLoadingBoard] = useState(true);
+  const [presetKeys, setPresetKeys] = useState<string[]>([]);
   const [validTargetCells, setValidTargetCells] = useState<BoardCellKey[]>([]);
   const [attackerCells, setAttackerCells] = useState<BoardCellKey[]>([]);
 
@@ -53,6 +54,31 @@ export const useBoard = () => {
     }
   }, [fetchBoard]);
 
+  const presetGame = useCallback(
+    async (presetKey: string): Promise<SubmitMoveResult> => {
+      try {
+        await BoardService.preset(presetKey);
+        await fetchBoard();
+        return { success: true };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to load preset game";
+        return { success: false, message };
+      }
+    },
+    [fetchBoard],
+  );
+
+  const fetchPresetKeys = useCallback(async () => {
+    try {
+      const response = await BoardService.getPresetKeys();
+      setPresetKeys(response.presetKeys);
+    } catch (error) {
+      console.error("Error fetching preset keys:", error);
+      setPresetKeys([]);
+    }
+  }, []);
+
   const fetchValidTargetCells = useCallback(async (source: BoardCellKey) => {
     try {
       const response = await BoardService.getValidTargets(source);
@@ -91,7 +117,7 @@ export const useBoard = () => {
   useEffect(() => {
     const initializeBoard = async () => {
       try {
-        await fetchBoard();
+        await Promise.all([fetchBoard(), fetchPresetKeys()]);
       } catch (error) {
         console.error("Error fetching board:", error);
       } finally {
@@ -100,13 +126,15 @@ export const useBoard = () => {
     };
 
     void initializeBoard();
-  }, [fetchBoard]);
+  }, [fetchBoard, fetchPresetKeys]);
 
   return {
     board,
     isLoadingBoard,
+    presetKeys,
     submitMove,
     resetGame,
+    presetGame,
     refreshBoard: fetchBoard,
     validTargetCells,
     attackerCells,

@@ -20,7 +20,3 @@ export interface Piece {
 export const nameOf = (p: Piece) => {
   return `${p.color[0]}${p.shortClass}`;
 };
-
-export const toString = (p: Piece) => {
-  return nameOf(p);
-};

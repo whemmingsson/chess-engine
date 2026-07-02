@@ -28,16 +28,21 @@ export class Engine {
   targetedCellsByColor: Record<PieceColor, PieceTargets[]>;
   isCheckColor?: PieceColor; // Set to the color of the king currently under threat
   validMovesCache?: string[]; // Contains the previosly calculated valid move targets
-  constructor() {
+  constructor(board?: Record<string, Piece | null>) {
     this.colorToMove = "White";
-    this.board = {};
+
     this.history = [];
     this.movedPieces = new Set();
     this.targetedCellsByColor = {
       White: [],
       Black: [],
     };
-    this._initBoard();
+    if (board) {
+      this.board = board;
+    } else {
+      this.board = {};
+      this._initBoard();
+    }
     this._updateTargetedCellsByColor();
     console.log("[ENGINE] Chess engine initialized");
   }

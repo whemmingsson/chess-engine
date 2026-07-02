@@ -1,4 +1,7 @@
-import { pieceDefinitionMap } from "../../../common/config/board-config";
+import {
+  makeId,
+  pieceDefinitionMap,
+} from "../../../common/config/board-config";
 import { Piece, PieceClass, PieceColor } from "../../../common/models/Piece";
 
 export const createNewPieceOfClass = (
@@ -11,6 +14,6 @@ export const createNewPieceOfClass = (
   return {
     ...pieceDefinitionMap[pieceClass],
     color: pieceColor,
-    id: `${pieceColor[0]}${shortClass}@${sourceCell}`,
+    id: makeId(sourceCell, pieceColor, shortClass),
   };
 };

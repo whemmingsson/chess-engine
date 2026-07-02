@@ -15,6 +15,7 @@ const toLetter = (index: number) => {
 export const Board = () => {
   const [selectedFromCell, setSelectedFromCell] =
     React.useState<BoardCellKey | null>(null);
+  const [selectedPresetKey, setSelectedPresetKey] = React.useState("");
   const [pendingPromotionMove, setPendingPromotionMove] = React.useState<{
     source: BoardCellKey;
     target: BoardCellKey;
@@ -26,8 +27,10 @@ export const Board = () => {
   const {
     board,
     isLoadingBoard,
+    presetKeys,
     submitMove,
     resetGame,
+    presetGame,
     validTargetCells,
     attackerCells,
     fetchValidTargetCells,
@@ -35,6 +38,17 @@ export const Board = () => {
     clearValidTargetCells,
     clearAttackerCells,
   } = useBoard();
+
+  React.useEffect(() => {
+    if (presetKeys.length === 0) {
+      setSelectedPresetKey("");
+      return;
+    }
+
+    setSelectedPresetKey((current) =>
+      current && presetKeys.includes(current) ? current : presetKeys[0]!,
+    );
+  }, [presetKeys]);
 
   const getPiece = React.useCallback(
     (cellKey: BoardCellKey): Piece | null => {
@@ -200,6 +214,29 @@ export const Board = () => {
     handleClearClick();
   };
 
+  const handlePresetClick = async () => {
+    if (!selectedPresetKey) {
+      alert("Please select a preset.");
+      return;
+    }
+
+    const shouldPreset = window.confirm(
+      "Do you really want to load a preset game?",
+    );
+
+    if (!shouldPreset) {
+      return;
+    }
+
+    const result = await presetGame(selectedPresetKey);
+    if (!result.success) {
+      alert(result.message);
+      return;
+    }
+
+    handleClearClick();
+  };
+
   if (isLoadingBoard || !board) {
     return <div>Loading board...</div>;
   }
@@ -258,6 +295,22 @@ export const Board = () => {
           type="button"
           value={"Reset"}
           onClick={() => void handleResetClick()}
+        />
+        <select
+          value={selectedPresetKey}
+          onChange={(e) => setSelectedPresetKey(e.target.value)}
+        >
+          {presetKeys.map((presetKey) => (
+            <option key={presetKey} value={presetKey}>
+              {presetKey}
+            </option>
+          ))}
+        </select>
+        <input
+          type="button"
+          value={"Preset"}
+          onClick={() => void handlePresetClick()}
+          disabled={!selectedPresetKey}
         />
       </div>
       {pendingPromotionMove && (

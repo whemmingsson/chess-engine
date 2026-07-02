@@ -49,7 +49,7 @@ export const pieceDefinitionMap: Record<PieceClass, PieceDefinition> = {
   Pawn,
 };
 
-const makeId = (
+export const makeId = (
   sourceCell: string,
   color: PieceColor,
   shortClass: PieceShortClass,

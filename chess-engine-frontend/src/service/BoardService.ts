@@ -23,6 +23,10 @@ export interface TargetingCellsResponse {
   cells: BoardCellKey[];
 }
 
+export interface PresetKeysResponse {
+  presetKeys: string[];
+}
+
 export interface MoveSuccessResponse {
   success: true;
   board: BoardMap;
@@ -35,6 +39,7 @@ export interface MoveFailureResponse {
 
 export type MoveResponse = MoveSuccessResponse | MoveFailureResponse;
 export type ResetResponse = MoveSuccessResponse;
+export type PresetResponse = MoveSuccessResponse;
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000",
@@ -68,6 +73,18 @@ export const BoardService = {
 
   async reset(): Promise<ResetResponse> {
     const response = await api.post<ResetResponse>("/reset");
+    return response.data;
+  },
+
+  async getPresetKeys(): Promise<PresetKeysResponse> {
+    const response = await api.get<PresetKeysResponse>("/preset-keys");
+    return response.data;
+  },
+
+  async preset(presetKey: string): Promise<PresetResponse> {
+    const response = await api.post<PresetResponse>(
+      `/preset?presetKey=${encodeURIComponent(presetKey)}`,
+    );
     return response.data;
   },
 
