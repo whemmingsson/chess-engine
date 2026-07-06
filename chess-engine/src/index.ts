@@ -21,7 +21,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.get("/board", (_req, res) => {
-  res.status(200).json({ board: engine.getBoard() });
+  res.status(200).json({ board: engine.getBoard().getBoard() });
 });
 
 app.get("/valid-targets/:source", (req, res) => {
@@ -43,7 +43,7 @@ app.post("/reset", (_req, res) => {
 
   res.status(200).json({
     success: true,
-    board: engine.getBoard(),
+    board: engine.getBoard().getBoard(),
   });
 });
 
@@ -64,7 +64,7 @@ app.post("/preset", (_req, res) => {
 
   res.status(200).json({
     success: true,
-    board: engine.getBoard(),
+    board: engine.getBoard().getBoard(),
   });
 });
 
@@ -81,7 +81,7 @@ app.post("/move", (req, res) => {
 
     res.status(200).json({
       success: true,
-      board: engine.getBoard(),
+      board: engine.getBoard().getBoard(),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Move failed";

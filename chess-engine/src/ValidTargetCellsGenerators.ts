@@ -344,8 +344,7 @@ export const generators: Record<PieceClass, TargetCellGenerator> = {
         ].map(toCell);
 
         return (
-          board[rookCell] &&
-          board[rookCell].class === "Rook" &&
+          board[rookCell]?.class === "Rook" &&
           !hasPieceMoved(board[rookCell], movedPieces) &&
           cellsToBeEmpty.every((c) => !board[c]) &&
           !areCellsTargeted(targetedCells, cellsToBeSafe)

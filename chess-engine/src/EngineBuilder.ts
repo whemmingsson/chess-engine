@@ -37,6 +37,11 @@ export class EngineBuilder {
     }
   }
 
+  reset() {
+    this.board = {};
+    return this;
+  }
+
   set(color: PieceColor, pieceClass: PieceClass, cell: string) {
     const piece = createNewPieceOfClass(pieceClass, color, cell);
     this.board[cell] = piece;

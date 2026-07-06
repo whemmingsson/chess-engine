@@ -1,4 +1,3 @@
-import { pieceMap } from "../../common/config/board-config";
 import { EnrichedMove } from "../../common/models/EnrichedMove";
 import { Move } from "../../common/models/Move";
 import {
@@ -7,30 +6,38 @@ import {
   PieceClass,
   PieceColor,
 } from "../../common/models/Piece";
+import { Board } from "./Board";
 import { config } from "./config/config";
-import { MoveClass } from "./types/MoveClass";
+import { classifyMove } from "./MoveClassiification";
 import { PieceTargets } from "./types/PieceTargets";
-import { Position } from "./types/Position";
-import {
-  otherColor,
-  toCell,
-  enrichMove,
-  toPosition,
-} from "./utils/ConversionUtils";
+import { otherColor, enrichMove, toPosition } from "./utils/ConversionUtils";
 import { createNewPieceOfClass } from "./utils/PieceUtils";
 import { generators } from "./ValidTargetCellsGenerators";
 
 export class Engine {
-  board: Record<string, Piece | null>;
+  // Encapsulates the actual board
+  private board: Board;
+
+  // Keeps a record of all previous moves - used for generating valid en-passant moves
   history: EnrichedMove[];
+
+  // The current color that is to perform a move
   colorToMove: PieceColor;
+
+  // All pieces that have been moved
   movedPieces: Set<string>;
+
+  // A special record keeping track of all targeted cells, for a given color
   targetedCellsByColor: Record<PieceColor, PieceTargets[]>;
-  isCheckColor?: PieceColor; // Set to the color of the king currently under threat
-  validMovesCache?: string[]; // Contains the previosly calculated valid move targets
+
+  // Is the king under attack? This keeps track of that kings color
+  isCheckColor?: PieceColor;
+
+  // Contains the previosly calculated valid move targets
+  validMovesCache?: string[];
+
   constructor(board?: Record<string, Piece | null>) {
     this.colorToMove = "White";
-
     this.history = [];
     this.movedPieces = new Set();
     this.targetedCellsByColor = {
@@ -38,10 +45,9 @@ export class Engine {
       Black: [],
     };
     if (board) {
-      this.board = board;
+      this.board = new Board(board);
     } else {
-      this.board = {};
-      this._initBoard();
+      this.board = new Board();
     }
     this._updateTargetedCellsByColor();
     console.log("[ENGINE] Chess engine initialized");
@@ -53,50 +59,17 @@ export class Engine {
 
   _resetEngine() {
     this.colorToMove = "White";
-    this.board = {};
+    this.board = new Board();
     this.history = [];
     this.movedPieces = new Set();
     this.targetedCellsByColor = {
       White: [],
       Black: [],
     };
-    this._initBoard();
     this._updateTargetedCellsByColor();
     this.isCheckColor = undefined;
     this.validMovesCache = undefined;
     console.log("[ENGINE] Chess engine re-initialized");
-  }
-
-  private _initBoard() {
-    for (let i = 8; i >= 1; i--) {
-      for (let j = 0; j < 8; j++) {
-        const cellColLetter = String.fromCharCode(j + 65);
-        const cellRowNumber = i;
-        const cellKey = cellColLetter + cellRowNumber;
-        const piece = pieceMap[cellKey];
-        this.board[cellKey] = piece;
-      }
-    }
-  }
-
-  private _getPieceAtCell(cellKey: string): Piece | null {
-    return this.board[cellKey] || null;
-  }
-
-  private _deleteAtPos(pos: Position) {
-    delete this.board[toCell(pos)];
-  }
-
-  private _deleteAt(cell: string) {
-    delete this.board[cell];
-  }
-
-  private _setAtPos(piece: Piece, pos: Position) {
-    this.board[toCell(pos)] = piece;
-  }
-
-  private _setAt(piece: Piece, cell: string) {
-    this.board[cell] = piece;
   }
 
   private _isMoveObjectValid(move: Move) {
@@ -126,144 +99,23 @@ export class Engine {
     return true;
   }
 
-  private _isPieceClassAt(pc: PieceClass, cell: string) {
-    return this.board[cell]?.class === pc;
-  }
-
-  private _isEnPassantMove(move: Move) {
-    if (!this._isPieceClassAt("Pawn", move.source)) {
-      return false;
-    }
-
-    const s = toPosition(move.source);
-    const t = toPosition(move.target);
-    const isDiagonalMove =
-      Math.abs(s.column - t.column) === 1 && Math.abs(s.row - t.row) === 1;
-
-    if (!isDiagonalMove) {
-      return false;
-    }
-
-    const isTargetEmpty = !this.board[move.target];
-
-    return isTargetEmpty;
-  }
-
   private _handleEnPassantMoveAndCapture(move: Move) {
-    const pawnToMove = this._getPieceAtCell(move.source)!;
-
-    const targetPosition = toPosition(move.target);
-    const positionToClear = {
-      column: targetPosition.column,
-      row: targetPosition.row + (pawnToMove.color === "White" ? -1 : 1),
-    };
-
-    this._setAt(pawnToMove, move.target);
-    this._deleteAtPos(positionToClear);
-    this._deleteAt(move.source);
-
+    this.board.executeEnPassant(move);
     this.history.push(enrichMove(move, { enPassant: true }));
   }
 
   private _handleDefaultMove(move: Move) {
-    this._setAt(this._getPieceAtCell(move.source)!, move.target);
-    this._deleteAt(move.source);
+    this.board.executeDefault(move);
     this.history.push(move);
-  }
-
-  private _isPromotionMove(move: Move) {
-    if (!this._isPieceClassAt("Pawn", move.source)) {
-      return false;
-    }
-
-    const targetPosition = toPosition(move.target);
-
-    return targetPosition.row === 1 || targetPosition.row === 8;
   }
 
   private _handlePromotionMove(move: EnrichedMove) {
-    const pawnToPromote = this.board[move.source]!;
-
-    if (config.engine.autoPromoteToQueen) {
-      this._promoteToPieceAt("Queen", pawnToPromote.color, move.target);
-      this._deleteAt(move.source);
-      return;
-    }
-
-    if (!move.metadata?.promoteTo) {
-      throw Error(
-        "Missing promotion metadata. Set move.metadata.promoteTo to desired class.",
-      );
-    }
-
-    if (move.metadata?.promoteTo === "King") {
-      throw Error("Invalid promotion metadata. Cannot promote to King.");
-    }
-
-    this._promoteToPieceAt(
-      move.metadata.promoteTo,
-      pawnToPromote.color,
-      move.target,
-    );
-
-    this._deleteAt(move.source);
-
+    this.board.executePromotion(move, config.engine.autoPromoteToQueen);
     this.history.push(move);
   }
 
-  private _promoteToPieceAt(
-    pieceClass: PieceClass,
-    pieceColor: PieceColor,
-    targetCell: string,
-  ) {
-    this.board[targetCell] = createNewPieceOfClass(
-      pieceClass,
-      pieceColor,
-      targetCell,
-    );
-  }
-
-  private _isCastelingMove(move: EnrichedMove) {
-    const movingPiece = this.board[move.source];
-    if (!movingPiece) {
-      return false;
-    }
-
-    if (movingPiece.class !== "King") {
-      return false;
-    }
-
-    const sourcePos = toPosition(move.source);
-    const targetPos = toPosition(move.target);
-
-    if (sourcePos.row !== targetPos.row) {
-      return false;
-    }
-
-    const moveLength = Math.abs(sourcePos.column - targetPos.column);
-
-    return moveLength === 2;
-  }
-
   private _handleCastelingMove(move: EnrichedMove): Piece {
-    const sourcePos = toPosition(move.source);
-    const targetPos = toPosition(move.target);
-
-    const isKingSide = targetPos.column > sourcePos.column;
-
-    const rookPosition = { row: sourcePos.row, column: isKingSide ? 8 : 1 };
-    const rook = this.board[toCell(rookPosition)]!;
-
-    const newRookPosition = {
-      row: sourcePos.row,
-      column: isKingSide ? targetPos.column - 1 : targetPos.column + 1,
-    };
-
-    this._setAt(this._getPieceAtCell(move.source)!, move.target);
-    this._setAtPos(rook, newRookPosition);
-
-    this._deleteAt(move.source);
-    this._deleteAtPos(rookPosition);
+    const rook = this.board.executeCasteling(move);
 
     this.history.push(
       enrichMove(move, { casteling: true, casteledRook: rook }),
@@ -275,23 +127,20 @@ export class Engine {
   }
 
   private _getValidTargetCellsForAll(color?: PieceColor): PieceTargets[] {
-    return Object.keys(this.board)
-      .filter((c) => this.board[c] !== null && this.board[c] !== undefined)
-      .filter((c) => this.board[c]?.color === color)
-      .flatMap((c) => {
-        const piece = this.board[c]!;
+    return this.board.getPieces(color).flatMap((c) => {
+      const piece = this.board.getPieceAtCell(c)!;
 
-        return {
-          piece,
-          pieceCell: c,
-          targetCells: generators[piece.class].generate(
-            toPosition(c),
-            this.board,
-            this.history,
-            this.movedPieces,
-          ),
-        };
-      });
+      return {
+        piece,
+        pieceCell: c,
+        targetCells: generators[piece.class].generate(
+          toPosition(c),
+          this.board.getBoard(),
+          this.history,
+          this.movedPieces,
+        ),
+      };
+    });
   }
 
   private _updateTargetedCellsByColor() {
@@ -316,84 +165,51 @@ export class Engine {
 
     const targetedKingPieces = targetedCells
       .flatMap((i) => i.targetCells)
-      .map((c) => (this.board[c] ? (this.board[c] as Piece) : null))
+      .map((c) => this.board.getPieceAtCell(c))
       .filter((c) => c && c.class === "King");
     return targetedKingPieces.length >= 1;
   }
 
-  private _getAllValidTargets(move: EnrichedMove) {
-    const { source } = move;
-    const piece = this._getPieceAtCell(source)!;
-
-    console.log(
-      `[ENGINE] Calculating new valid targets for ${nameOf(piece)} at ${source}`,
-    );
+  private _getAllValidTargets(source: string) {
+    const piece = this.board.getPieceAtCell(source)!;
 
     const validTargetCells = generators[piece.class].generate(
       toPosition(source),
-      this.board,
+      this.board.getBoard(),
       this.history,
       this.movedPieces,
       this.targetedCellsByColor[otherColor(piece.color)],
     );
 
-    if (!this.isCheckColor) {
-      return validTargetCells;
-    }
-
-    const moveResolvesCheck = (target: string) => {
-      console.log(
-        `[ENGINE] Checking if moving ${nameOf(piece)} to target ${target} resolved the check..`,
-      );
-      // Perform the most hacky solution to date - move the piece and see if the king is still in check!
-      // NOTE: There might be a situation where an en-passant or promotion would resolve the check. Lets come back to this. Right now the engine cannot resolve this with the current algorithm.
-
+    const putsTheKingInCheck = (target: string) => {
       // Perform the move
-      const capturedPiece = this._getPieceAtCell(target);
-      this.board[target] = piece;
-      delete this.board[source];
+      const capturedPiece = this.board.getPieceAtCell(target);
+      this.board.setAt(piece, target);
+      this.board.deleteAt(source);
 
       // Calculate the new targets
       const targeted = this._getValidTargetCellsForAll(otherColor(piece.color));
-      const isKingStillChecked = this._isKingInCheck(targeted);
+      const isKingChecked = this._isKingInCheck(targeted);
 
       // RESET! SUPER IMPORTANT!
       if (capturedPiece) {
-        this.board[target] = capturedPiece;
+        this.board.setAt(capturedPiece, target);
       } else {
-        delete this.board[target];
+        this.board.deleteAt(target);
       }
 
-      this.board[source] = piece;
+      this.board.setAt(piece, source);
 
-      console.log(`[ENGINE] Is king still in check? ${isKingStillChecked}`);
-
-      return !isKingStillChecked;
+      return isKingChecked;
     };
 
-    return validTargetCells.filter(moveResolvesCheck);
-  }
-
-  private _classifyMove(move: EnrichedMove): MoveClass {
-    if (this._isEnPassantMove(move)) {
-      return "EnPassant";
-    }
-
-    if (this._isPromotionMove(move)) {
-      return "Promotion";
-    }
-
-    if (this._isCastelingMove(move)) {
-      return "Casteling";
-    }
-
-    return "Default";
+    return validTargetCells.filter((cell) => !putsTheKingInCheck(cell));
   }
 
   private _canPieceMove(move: Move) {
     /* This method does the trivial checks that are piece agnostic*/
 
-    const piece = this._getPieceAtCell(move.source);
+    const piece = this.board.getPieceAtCell(move.source);
 
     // No piece violation test
     if (!piece) {
@@ -405,7 +221,7 @@ export class Engine {
       throw Error(`It is ${this.colorToMove}'s turn to move`);
     }
 
-    const pieceAtTargetCell = this._getPieceAtCell(move.target);
+    const pieceAtTargetCell = this.board.getPieceAtCell(move.target);
 
     // Target piece of same color violation test
     if (pieceAtTargetCell && pieceAtTargetCell.color === piece.color) {
@@ -419,11 +235,11 @@ export class Engine {
 
   private _canSpecificPieceMove(move: Move) {
     const { target } = move;
-    const piece = this._getPieceAtCell(move.source)!;
+    const piece = this.board.getPieceAtCell(move.source)!;
     const allValidTargets =
       this.validMovesCache && this.validMovesCache.length > 0
         ? this.validMovesCache
-        : this._getAllValidTargets(move);
+        : this._getAllValidTargets(move.source);
 
     const isValidMove = allValidTargets.some((p) => p === target);
 
@@ -462,9 +278,9 @@ export class Engine {
       return;
     }
 
-    const pieceMoving = this.board[move.source]!;
+    const pieceMoving = this.board.getPieceAtCell(move.source)!;
 
-    switch (this._classifyMove(move)) {
+    switch (classifyMove(move, this.board)) {
       case "EnPassant":
         this._handleEnPassantMoveAndCapture(move);
         break;
@@ -481,10 +297,8 @@ export class Engine {
     this._registerPieceAsMoved(pieceMoving);
     this._updateTargetedCellsByColor();
 
-    const isKingChecked = this._isKingInCheck();
-    if (isKingChecked) {
+    if (this._isKingInCheck()) {
       this.isCheckColor = otherColor(this.colorToMove);
-      console.log(`${this.isCheckColor}'s king is under attack!`);
     }
 
     this.colorToMove = otherColor(this.colorToMove);
@@ -492,14 +306,14 @@ export class Engine {
   }
 
   getValidPositionsForPiece(source: string) {
-    const piece = this._getPieceAtCell(source);
+    const piece = this.board.getPieceAtCell(source);
 
     if (!piece) {
       this.validMovesCache = [];
       return [];
     }
 
-    const validTargets = this._getAllValidTargets({ source, target: "" }); // TODO: How to fix this ugly crap?
+    const validTargets = this._getAllValidTargets(source);
 
     this.validMovesCache = validTargets;
 
@@ -515,7 +329,7 @@ export class Engine {
   }
 
   getCellsThatTargetsCell(cell: string) {
-    const targetPiece = this._getPieceAtCell(cell);
+    const targetPiece = this.board.getPieceAtCell(cell);
 
     if (targetPiece) {
       return this._getValidTargetCellsForAll(otherColor(targetPiece.color))
@@ -524,20 +338,20 @@ export class Engine {
     }
 
     // Inject a dummy pawn to act as "target"
-    this._setAt(createNewPieceOfClass("Pawn", "Black", cell), cell);
+    this.board.setAt(createNewPieceOfClass("Pawn", "Black", cell), cell);
 
     const whiteAttacks = this._getValidTargetCellsForAll("White")
       .filter((i) => i.targetCells.indexOf(cell) >= 0)
       .map((i) => i.pieceCell);
 
     // Inject a dummy pawn to act as "target"
-    this._setAt(createNewPieceOfClass("Pawn", "White", cell), cell);
+    this.board.setAt(createNewPieceOfClass("Pawn", "White", cell), cell);
 
     const blackAttacks = this._getValidTargetCellsForAll("Black")
       .filter((i) => i.targetCells.indexOf(cell) >= 0)
       .map((i) => i.pieceCell);
 
-    this._deleteAt(cell);
+    this.board.deleteAt(cell);
 
     return [...whiteAttacks, ...blackAttacks];
   }
