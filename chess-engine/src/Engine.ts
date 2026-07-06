@@ -9,6 +9,7 @@ import {
 import { Board } from "./Board";
 import { config } from "./config/config";
 import { classifyMove } from "./MoveClassiification";
+import { canPieceMove, isMoveObjectValid } from "./MoveValidation";
 import { PieceTargets } from "./types/PieceTargets";
 import { otherColor, enrichMove, toPosition } from "./utils/ConversionUtils";
 import { createNewPieceOfClass } from "./utils/PieceUtils";
@@ -70,33 +71,6 @@ export class Engine {
     this.isCheckColor = undefined;
     this.validMovesCache = undefined;
     console.log("[ENGINE] Chess engine re-initialized");
-  }
-
-  private _isMoveObjectValid(move: Move) {
-    if (!move.source) {
-      throw Error("Source cell not provided");
-    }
-
-    if (!move.target) {
-      throw Error("Target cell not provided");
-    }
-
-    if (move.source === move.target) {
-      throw Error("Source and target are the same cell");
-    }
-
-    const s = toPosition(move.source);
-    const t = toPosition(move.target);
-
-    if (s.column < 1 || s.column > 8 || s.row < 1 || s.row > 8) {
-      throw Error(`Source cell at ${move.source} is out of bounds`);
-    }
-
-    if (t.column < 1 || t.column > 8 || t.row < 1 || t.row > 8) {
-      throw Error(`Target cell at ${move.target} is out of bounds`);
-    }
-
-    return true;
   }
 
   private _handleEnPassantMoveAndCapture(move: Move) {
@@ -206,40 +180,13 @@ export class Engine {
     return validTargetCells.filter((cell) => !putsTheKingInCheck(cell));
   }
 
-  private _canPieceMove(move: Move) {
-    /* This method does the trivial checks that are piece agnostic*/
-
-    const piece = this.board.getPieceAtCell(move.source);
-
-    // No piece violation test
-    if (!piece) {
-      throw Error(`Not a piece at: ${move.source}`);
-    }
-
-    // Color violation test
-    if (!config.engine.disablePlayOrder && piece.color !== this.colorToMove) {
-      throw Error(`It is ${this.colorToMove}'s turn to move`);
-    }
-
-    const pieceAtTargetCell = this.board.getPieceAtCell(move.target);
-
-    // Target piece of same color violation test
-    if (pieceAtTargetCell && pieceAtTargetCell.color === piece.color) {
-      throw Error(
-        `Piece at target cell ${move.target} - ${nameOf(pieceAtTargetCell)} has the same color as piece to be moved - ${nameOf(piece)}`,
-      );
-    }
-
-    return true;
-  }
-
-  private _canSpecificPieceMove(move: Move) {
-    const { target } = move;
-    const piece = this.board.getPieceAtCell(move.source)!;
+  private _isMoveLegal(move: Move) {
+    const { target, source } = move;
+    const piece = this.board.getPieceAtCell(source)!;
     const allValidTargets =
       this.validMovesCache && this.validMovesCache.length > 0
         ? this.validMovesCache
-        : this._getAllValidTargets(move.source);
+        : this._getAllValidTargets(source);
 
     const isValidMove = allValidTargets.some((p) => p === target);
 
@@ -263,17 +210,25 @@ export class Engine {
   }
 
   movePiece(move: EnrichedMove) {
-    if (!this._isMoveObjectValid(move)) {
+    if (!isMoveObjectValid(move)) {
       this.validMovesCache = [];
       return;
     }
 
-    if (!this._canPieceMove(move)) {
+    if (
+      !canPieceMove(
+        move,
+        this.board.getPieceAtCell(move.source),
+        this.board.getPieceAtCell(move.target),
+        this.colorToMove,
+        config.engine.disablePlayOrder,
+      )
+    ) {
       this.validMovesCache = [];
       return;
     }
 
-    if (!this._canSpecificPieceMove(move)) {
+    if (!this._isMoveLegal(move)) {
       this.validMovesCache = [];
       return;
     }
