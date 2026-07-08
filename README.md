@@ -12,6 +12,15 @@ A TypeScript chess project split into three parts:
 - Frontend: React, TypeScript, Vite
 - Shared code: TypeScript modules imported by backend/frontend
 
+## Core Engine Design
+
+- The game state is managed by the `Engine` class in `chess-engine/src/Engine.ts`.
+- Board state is encapsulated in `Board` (`chess-engine/src/Board.ts`) and accessed through public methods.
+- Move classification and validation are split into dedicated modules:
+  - `chess-engine/src/MoveClassiification.ts`
+  - `chess-engine/src/MoveValidation.ts`
+- Shared chess domain models are in `common/models`.
+
 ## Project Structure
 
 ```text
@@ -70,6 +79,7 @@ The backend reads environment variables from `.env`.
 - `FRONTEND_ORIGIN` (default: `http://localhost:5173`)
 - `ALLOW_CORS_CREDENTIALS` (`true` or `false`, default: `false`)
 - `DISABLE_PLAY_ORDER` (`true` or `false`, default: `false`)
+- `AUTO_PROMOTE_TO_QUEEN` (`true` or `false`, default: `false`)
 
 Example:
 
@@ -78,6 +88,7 @@ PORT=3000
 FRONTEND_ORIGIN=http://localhost:5173
 ALLOW_CORS_CREDENTIALS=false
 DISABLE_PLAY_ORDER=false
+AUTO_PROMOTE_TO_QUEEN=false
 ```
 
 ### Frontend (`chess-engine-frontend`)
@@ -99,7 +110,11 @@ Base URL: `http://localhost:3000`
 - `GET /health` -> returns API status
 - `GET /board` -> returns current board state
 - `GET /valid-targets/:source` -> returns valid target cells for a source cell (example: `A2`)
+- `GET /targeting-cells/:cell` -> returns all cells currently attacking a given cell
+- `GET /preset-keys` -> returns available preset keys
 - `POST /move` -> performs a move
+- `POST /reset` -> resets game state to the default starting board
+- `POST /preset?presetKey=<key>` -> loads a board preset and resets engine state to it
 
 Example move payload:
 
@@ -108,6 +123,12 @@ Example move payload:
   "source": "E2",
   "target": "E4"
 }
+```
+
+Example preset request:
+
+```http
+POST /preset?presetKey=LonelyPawn
 ```
 
 `POST /move` response:
@@ -154,3 +175,5 @@ Example move payload:
 - The starting piece layout is defined in `common/config/board-config.ts`.
 - Shared move/piece models live in `common/models`.
 - Backend CORS defaults are configured for local frontend development.
+- Engine presets are configured in `chess-engine/src/EnginePresets.ts`.
+- The frontend consumes backend endpoints from `chess-engine-frontend/src/service/BoardService.ts`.
