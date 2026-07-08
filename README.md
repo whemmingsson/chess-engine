@@ -37,6 +37,20 @@ chess-engine/
 
 ## Quick Start
 
+### 0) Optional monorepo local dev setup (single command)
+
+From the repository root:
+
+```bash
+pnpm install
+pnpm dev
+```
+
+This starts both apps for local development:
+
+- backend (`chess-engine`) on `http://localhost:3000`
+- frontend (`chess-engine-frontend`) on `http://localhost:5173`
+
 ### 1) Install dependencies
 
 From each app directory:

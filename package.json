@@ -1,0 +1,14 @@
+{
+  "name": "chess-engine-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local development scripts for running backend and frontend together.",
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c yellow,cyan \"pnpm --dir chess-engine dev\" \"pnpm --dir chess-engine-frontend dev\"",
+    "dev:backend": "pnpm --dir chess-engine dev",
+    "dev:frontend": "pnpm --dir chess-engine-frontend dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
