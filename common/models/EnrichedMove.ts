@@ -6,7 +6,8 @@ export type MoveMetaData = object & {
   casteling?: boolean;
   casteledRook?: Piece;
   promoteTo?: PieceClass;
-  pieceMoved?: Piece;
+  pieceMoved?: Piece | null;
+  pieceTargeted?: Piece | null;
 };
 
 export interface EnrichedMove extends Move {

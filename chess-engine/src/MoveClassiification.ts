@@ -4,8 +4,8 @@ import { Board } from "./Board";
 import { MoveClass } from "./types/MoveClass";
 import { toPosition } from "./utils/ConversionUtils";
 
-const isEnPassantMove = (move: Move, board: Board) => {
-  if (!board.isPieceClassAt("Pawn", move.source)) {
+const isEnPassantMove = (move: EnrichedMove) => {
+  if (move.metadata?.pieceMoved?.class !== "Pawn") {
     return false;
   }
 
@@ -18,13 +18,13 @@ const isEnPassantMove = (move: Move, board: Board) => {
     return false;
   }
 
-  const isTargetEmpty = !board.getPieceAtCell(move.target);
+  const isTargetEmpty = !move.metadata?.pieceTargeted;
 
   return isTargetEmpty;
 };
 
-const isPromotionMove = (move: Move, board: Board) => {
-  if (!board.isPieceClassAt("Pawn", move.source)) {
+const isPromotionMove = (move: EnrichedMove) => {
+  if (move.metadata?.pieceMoved?.class !== "Pawn") {
     return false;
   }
 
@@ -33,8 +33,8 @@ const isPromotionMove = (move: Move, board: Board) => {
   return targetPosition.row === 1 || targetPosition.row === 8;
 };
 
-const isCastelingMove = (move: EnrichedMove, board: Board) => {
-  const movingPiece = board.getPieceAtCell(move.source);
+const isCastelingMove = (move: EnrichedMove) => {
+  const movingPiece = move.metadata?.pieceMoved;
   if (!movingPiece) {
     return false;
   }
@@ -55,16 +55,16 @@ const isCastelingMove = (move: EnrichedMove, board: Board) => {
   return moveLength === 2;
 };
 
-export const classifyMove = (move: EnrichedMove, board: Board): MoveClass => {
-  if (isEnPassantMove(move, board)) {
+export const classifyMove = (move: EnrichedMove): MoveClass => {
+  if (isEnPassantMove(move)) {
     return "EnPassant";
   }
 
-  if (isPromotionMove(move, board)) {
+  if (isPromotionMove(move)) {
     return "Promotion";
   }
 
-  if (isCastelingMove(move, board)) {
+  if (isCastelingMove(move)) {
     return "Casteling";
   }
 

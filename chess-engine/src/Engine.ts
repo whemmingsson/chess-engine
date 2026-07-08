@@ -234,19 +234,26 @@ export class Engine {
     }
 
     const pieceMoving = this.board.getPieceAtCell(move.source)!;
+    const pieceTargeted = this.board.getPieceAtCell(move.target);
 
-    switch (classifyMove(move, this.board)) {
+    const moveWithPieces = enrichMove(move, {
+      ...move.metadata,
+      pieceMoved: pieceMoving,
+      pieceTargeted: pieceTargeted,
+    });
+
+    switch (classifyMove(moveWithPieces)) {
       case "EnPassant":
         this._handleEnPassantMoveAndCapture(move);
         break;
       case "Promotion":
-        this._handlePromotionMove(move);
+        this._handlePromotionMove(moveWithPieces);
         break;
       case "Casteling":
-        this._handleCastelingMove(move);
+        this._handleCastelingMove(moveWithPieces);
         break;
       default:
-        this._handleDefaultMove(move);
+        this._handleDefaultMove(moveWithPieces);
     }
 
     this._registerPieceAsMoved(pieceMoving);
