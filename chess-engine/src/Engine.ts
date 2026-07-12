@@ -1,15 +1,10 @@
 import { EnrichedMove } from "../../common/models/EnrichedMove";
-import { Move } from "../../common/models/Move";
-import {
-  nameOf,
-  Piece,
-  PieceClass,
-  PieceColor,
-} from "../../common/models/Piece";
+import { Piece, PieceColor } from "../../common/models/Piece";
 import { Board } from "./Board";
 import { config } from "./config/config";
 import { classifyMove } from "./MoveClassiification";
 import { canPieceMove, isMoveObjectValid } from "./MoveValidation";
+import { extendWithPositions, InternalMove } from "./types/InternalMove";
 import { PieceTargets } from "./types/PieceTargets";
 import { otherColor, enrichMove, toPosition } from "./utils/ConversionUtils";
 import { createNewPieceOfClass } from "./utils/PieceUtils";
@@ -73,17 +68,17 @@ export class Engine {
     console.log("[ENGINE] Chess engine re-initialized");
   }
 
-  private _handleEnPassantMoveAndCapture(move: Move) {
+  private _handleEnPassantMoveAndCapture(move: InternalMove) {
     this.board.executeEnPassant(move);
     this.history.push(enrichMove(move, { enPassant: true }));
   }
 
-  private _handleDefaultMove(move: Move) {
+  private _handleDefaultMove(move: InternalMove) {
     this.board.executeDefault(move);
     this.history.push(move);
   }
 
-  private _handlePromotionMove(move: EnrichedMove) {
+  private _handlePromotionMove(move: InternalMove) {
     this.board.executePromotion(move, config.engine.autoPromoteToQueen);
     this.history.push(move);
   }
@@ -102,7 +97,7 @@ export class Engine {
 
   private _getValidTargetCellsForAll(color?: PieceColor): PieceTargets[] {
     return this.board.getPieces(color).flatMap((c) => {
-      const piece = this.board.getPieceAtCell(c)!;
+      const piece = this.board.getPieceAt(c)!;
 
       return {
         piece,
@@ -123,12 +118,11 @@ export class Engine {
   }
 
   private _registerPieceAsMoved(piece: Piece) {
-    const pieceId = piece.id;
-    if (this.movedPieces.has(pieceId)) {
+    if (this.movedPieces.has(piece.id)) {
       return;
     }
 
-    this.movedPieces.add(pieceId);
+    this.movedPieces.add(piece.id);
   }
 
   private _isKingInCheck(pieceTargets?: PieceTargets[]) {
@@ -139,13 +133,13 @@ export class Engine {
 
     const targetedKingPieces = targetedCells
       .flatMap((i) => i.targetCells)
-      .map((c) => this.board.getPieceAtCell(c))
+      .map((c) => this.board.getPieceAt(c))
       .filter((c) => c && c.class === "King");
     return targetedKingPieces.length >= 1;
   }
 
   private _getAllValidTargets(source: string) {
-    const piece = this.board.getPieceAtCell(source)!;
+    const piece = this.board.getPieceAt(source)!;
 
     const validTargetCells = generators[piece.class].generate(
       toPosition(source),
@@ -157,7 +151,7 @@ export class Engine {
 
     const putsTheKingInCheck = (target: string) => {
       // Perform the move
-      const capturedPiece = this.board.getPieceAtCell(target);
+      const capturedPiece = this.board.getPieceAt(target);
       this.board.setAt(piece, target);
       this.board.deleteAt(source);
 
@@ -180,9 +174,9 @@ export class Engine {
     return validTargetCells.filter((cell) => !putsTheKingInCheck(cell));
   }
 
-  private _isMoveLegal(move: Move) {
+  private _isMoveLegal(move: InternalMove) {
     const { target, source } = move;
-    const piece = this.board.getPieceAtCell(source)!;
+    const piece = this.board.getPieceAt(source)!;
     const allValidTargets =
       this.validMovesCache && this.validMovesCache.length > 0
         ? this.validMovesCache
@@ -210,6 +204,8 @@ export class Engine {
   }
 
   movePiece(move: EnrichedMove) {
+    const internalMove = extendWithPositions(move);
+
     if (!isMoveObjectValid(move)) {
       this.validMovesCache = [];
       return;
@@ -217,9 +213,9 @@ export class Engine {
 
     if (
       !canPieceMove(
-        move,
-        this.board.getPieceAtCell(move.source),
-        this.board.getPieceAtCell(move.target),
+        internalMove,
+        this.board.getPieceAt(internalMove.source),
+        this.board.getPieceAt(internalMove.target),
         this.colorToMove,
         config.engine.disablePlayOrder,
       )
@@ -228,23 +224,23 @@ export class Engine {
       return;
     }
 
-    if (!this._isMoveLegal(move)) {
+    if (!this._isMoveLegal(internalMove)) {
       this.validMovesCache = [];
       return;
     }
 
-    const pieceMoving = this.board.getPieceAtCell(move.source)!;
-    const pieceTargeted = this.board.getPieceAtCell(move.target);
+    const pieceMoving = this.board.getPieceAt(internalMove.source)!;
+    const pieceTargeted = this.board.getPieceAt(internalMove.target);
 
-    const moveWithPieces = enrichMove(move, {
-      ...move.metadata,
+    const moveWithPieces = enrichMove(internalMove, {
+      ...internalMove.metadata,
       pieceMoved: pieceMoving,
       pieceTargeted: pieceTargeted,
-    });
+    }) as InternalMove;
 
     switch (classifyMove(moveWithPieces)) {
       case "EnPassant":
-        this._handleEnPassantMoveAndCapture(move);
+        this._handleEnPassantMoveAndCapture(internalMove);
         break;
       case "Promotion":
         this._handlePromotionMove(moveWithPieces);
@@ -268,7 +264,7 @@ export class Engine {
   }
 
   getValidPositionsForPiece(source: string) {
-    const piece = this.board.getPieceAtCell(source);
+    const piece = this.board.getPieceAt(source);
 
     if (!piece) {
       this.validMovesCache = [];
@@ -291,7 +287,7 @@ export class Engine {
   }
 
   getCellsThatTargetsCell(cell: string) {
-    const targetPiece = this.board.getPieceAtCell(cell);
+    const targetPiece = this.board.getPieceAt(cell);
 
     if (targetPiece) {
       return this._getValidTargetCellsForAll(otherColor(targetPiece.color))

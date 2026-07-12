@@ -4,6 +4,7 @@ import {
 } from "../../../common/models/EnrichedMove";
 import { Move } from "../../../common/models/Move";
 import { PieceColor } from "../../../common/models/Piece";
+import { InternalMove } from "../types/InternalMove";
 import { Position } from "../types/Position";
 
 export const toPosition = (cell: String): Position => {
@@ -26,6 +27,9 @@ export const otherColor = (color: PieceColor): PieceColor => {
   return color === "White" ? "Black" : "White";
 };
 
-export const enrichMove = (m: Move, metadata?: MoveMetaData): EnrichedMove => {
+export const enrichMove = (
+  m: Move | InternalMove,
+  metadata?: MoveMetaData,
+): EnrichedMove => {
   return { ...m, metadata };
 };

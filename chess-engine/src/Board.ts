@@ -44,28 +44,12 @@ export class Board {
     return this.boardMap[cell]?.class === pc;
   }
 
-  getPieceAtCell(cellKey: string): Piece | null {
-    return this.getPieceAt(cellKey);
+  deleteAt(cell: string | Position) {
+    delete this.boardMap[this.getCellKey(cell)];
   }
 
-  getPieceAtPos(position: Position): Piece | null {
-    return this.getPieceAt(position);
-  }
-
-  deleteAtPos(pos: Position) {
-    delete this.boardMap[toCell(pos)];
-  }
-
-  deleteAt(cell: string) {
-    delete this.boardMap[cell];
-  }
-
-  setAtPos(piece: Piece, pos: Position) {
-    this.boardMap[toCell(pos)] = piece;
-  }
-
-  setAt(piece: Piece, cell: string) {
-    this.boardMap[cell] = piece;
+  setAt(piece: Piece, cell: string | Position) {
+    this.boardMap[this.getCellKey(cell)] = piece;
   }
 
   isEmptyAt(cell: string | Position) {
@@ -89,7 +73,9 @@ export class Board {
       .filter((c) => (!!color ? this.boardMap[c]!.color === color : true));
   }
 
-  query() {}
+  query() {
+    // TODO: Implement query method to reduce if statements of doom
+  }
 
   promoteToPieceAt(
     pieceClass: PieceClass,
@@ -103,12 +89,12 @@ export class Board {
   }
 
   executeDefault(move: Move) {
-    this.setAt(this.getPieceAtCell(move.source)!, move.target);
+    this.setAt(this.getPieceAt(move.source)!, move.target);
     this.deleteAt(move.source);
   }
 
   executeEnPassant(move: Move) {
-    const pawnToMove = this.getPieceAtCell(move.source)!;
+    const pawnToMove = this.getPieceAt(move.source)!;
 
     const targetPosition = toPosition(move.target);
     const positionToClear = {
@@ -117,12 +103,12 @@ export class Board {
     };
 
     this.setAt(pawnToMove, move.target);
-    this.deleteAtPos(positionToClear);
+    this.deleteAt(positionToClear);
     this.deleteAt(move.source);
   }
 
   executePromotion(move: EnrichedMove, autoPromoteToQueen: boolean) {
-    const pawnToPromote = this.getPieceAtCell(move.source)!;
+    const pawnToPromote = this.getPieceAt(move.source)!;
 
     if (autoPromoteToQueen) {
       this.promoteToPieceAt("Queen", pawnToPromote.color, move.target);
@@ -156,18 +142,18 @@ export class Board {
     const isKingSide = targetPos.column > sourcePos.column;
 
     const rookPosition = { row: sourcePos.row, column: isKingSide ? 8 : 1 };
-    const rook = this.getPieceAtPos(rookPosition)!;
+    const rook = this.getPieceAt(rookPosition)!;
 
     const newRookPosition = {
       row: sourcePos.row,
       column: isKingSide ? targetPos.column - 1 : targetPos.column + 1,
     };
 
-    this.setAt(this.getPieceAtCell(move.source)!, move.target);
-    this.setAtPos(rook, newRookPosition);
+    this.setAt(this.getPieceAt(move.source)!, move.target);
+    this.setAt(rook, newRookPosition);
 
     this.deleteAt(move.source);
-    this.deleteAtPos(rookPosition);
+    this.deleteAt(rookPosition);
 
     return rook;
   }
