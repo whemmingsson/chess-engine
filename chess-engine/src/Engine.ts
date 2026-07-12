@@ -206,7 +206,7 @@ export class Engine {
   movePiece(move: EnrichedMove) {
     const internalMove = extendWithPositions(move);
 
-    if (!isMoveObjectValid(move)) {
+    if (!isMoveObjectValid(internalMove)) {
       this.validMovesCache = [];
       return;
     }
