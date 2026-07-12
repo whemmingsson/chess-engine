@@ -2,21 +2,22 @@ import { pieceMap } from "../../common/config/board-config";
 import { EnrichedMove } from "../../common/models/EnrichedMove";
 import { Move } from "../../common/models/Move";
 import { Piece, PieceClass, PieceColor } from "../../common/models/Piece";
+import { BoardMap } from "./types/BoardMap";
 import { Position } from "./types/Position";
 import { toCell, toPosition } from "./utils/ConversionUtils";
 import { createNewPieceOfClass } from "./utils/PieceUtils";
 
 export class Board {
-  private board: Record<string, Piece | null>;
+  private boardMap: BoardMap;
 
-  constructor(board?: Record<string, Piece | null>) {
-    this.board = {};
+  constructor(board?: BoardMap) {
+    this.boardMap = {};
     this.initialize(board);
   }
 
-  private initialize(board?: Record<string, Piece | null>) {
+  private initialize(board?: BoardMap) {
     if (board) {
-      this.board = board;
+      this.boardMap = board;
       return;
     }
 
@@ -26,48 +27,69 @@ export class Board {
         const cellRowNumber = i;
         const cellKey = cellColLetter + cellRowNumber;
         const piece = pieceMap[cellKey];
-        this.board[cellKey] = piece;
+        this.boardMap[cellKey] = piece;
       }
     }
   }
 
+  private getCellKey(cell: string | Position) {
+    return typeof cell === "string" ? cell : toCell(cell);
+  }
+
   getBoard() {
-    return this.board;
+    return this.boardMap;
   }
 
   isPieceClassAt(pc: PieceClass, cell: string) {
-    return this.board[cell]?.class === pc;
+    return this.boardMap[cell]?.class === pc;
   }
 
   getPieceAtCell(cellKey: string): Piece | null {
-    return this.board[cellKey] || null;
+    return this.getPieceAt(cellKey);
   }
 
   getPieceAtPos(position: Position): Piece | null {
-    return this.getPieceAtCell(toCell(position));
+    return this.getPieceAt(position);
   }
 
   deleteAtPos(pos: Position) {
-    delete this.board[toCell(pos)];
+    delete this.boardMap[toCell(pos)];
   }
 
   deleteAt(cell: string) {
-    delete this.board[cell];
+    delete this.boardMap[cell];
   }
 
   setAtPos(piece: Piece, pos: Position) {
-    this.board[toCell(pos)] = piece;
+    this.boardMap[toCell(pos)] = piece;
   }
 
   setAt(piece: Piece, cell: string) {
-    this.board[cell] = piece;
+    this.boardMap[cell] = piece;
+  }
+
+  isEmptyAt(cell: string | Position) {
+    const cellKey = this.getCellKey(cell);
+    return !this.boardMap[cellKey];
+  }
+
+  hasPieceAt(cell: string | Position) {
+    return !this.isEmptyAt(cell);
+  }
+
+  getPieceAt(cell: string | Position) {
+    return this.boardMap[this.getCellKey(cell)];
   }
 
   getPieces(color?: PieceColor) {
-    return Object.keys(this.board)
-      .filter((c) => this.board[c] !== null && this.board[c] !== undefined)
-      .filter((c) => (!!color ? this.board[c]!.color === color : true));
+    return Object.keys(this.boardMap)
+      .filter(
+        (c) => this.boardMap[c] !== null && this.boardMap[c] !== undefined,
+      )
+      .filter((c) => (!!color ? this.boardMap[c]!.color === color : true));
   }
+
+  query() {}
 
   promoteToPieceAt(
     pieceClass: PieceClass,

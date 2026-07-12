@@ -109,7 +109,7 @@ export class Engine {
         pieceCell: c,
         targetCells: generators[piece.class].generate(
           toPosition(c),
-          this.board.getBoard(),
+          this.board,
           this.history,
           this.movedPieces,
         ),
@@ -149,7 +149,7 @@ export class Engine {
 
     const validTargetCells = generators[piece.class].generate(
       toPosition(source),
-      this.board.getBoard(),
+      this.board,
       this.history,
       this.movedPieces,
       this.targetedCellsByColor[otherColor(piece.color)],

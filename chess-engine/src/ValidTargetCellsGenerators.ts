@@ -1,10 +1,11 @@
-import { Board } from "./types/Board";
+import { BoardMap } from "./types/BoardMap";
 import { Position } from "./types/Position";
 import { otherColor, toCell, toPosition } from "./utils/ConversionUtils";
 import { PieceClass } from "../../common/models/Piece";
 import { Move } from "../../common/models/Move";
 import { hasPieceMoved } from "../../common/utils/MovedPiecesUtils";
 import { areCellsTargeted, PieceTargets } from "./types/PieceTargets";
+import { Board } from "./Board";
 
 type TargetCellGenerator = {
   generate: (
@@ -25,8 +26,7 @@ const generateTargetCells = (
   rWhileFunc: (r: number) => boolean,
   cWhileFunc: (c: number) => boolean,
 ): Position[] => {
-  const sourceCell = toCell(source);
-  const oppositeColor = otherColor(board[sourceCell]!.color);
+  const oppositeColor = otherColor(board.getPieceAt(source)!.color);
   const positions = [];
   let r = source.row + rInc;
   let c = source.column + cInc;
@@ -34,11 +34,14 @@ const generateTargetCells = (
     const position = { row: r, column: c };
     const cell = toCell(position);
 
-    if (!board[cell] || board[cell].color === oppositeColor) {
+    if (
+      board.isEmptyAt(cell) ||
+      board.getPieceAt(cell)!.color === oppositeColor
+    ) {
       positions.push(position);
     }
 
-    if (board[cell]) {
+    if (board.hasPieceAt(cell)) {
       break;
     }
 
@@ -49,14 +52,14 @@ const generateTargetCells = (
   return positions;
 };
 
-const generateValidDiagonalPositions = (b: Board, s: Position) => {
+const generateValidDiagonalPositions = (board: Board, position: Position) => {
   const possiblePositions: Position[] = [];
 
   // Moving up-right
   possiblePositions.push(
     ...generateTargetCells(
-      b,
-      s,
+      board,
+      position,
       1,
       1,
       (r) => r <= 8,
@@ -67,8 +70,8 @@ const generateValidDiagonalPositions = (b: Board, s: Position) => {
   // Moving down-left
   possiblePositions.push(
     ...generateTargetCells(
-      b,
-      s,
+      board,
+      position,
       -1,
       -1,
       (r) => r >= 1,
@@ -79,8 +82,8 @@ const generateValidDiagonalPositions = (b: Board, s: Position) => {
   // Moving up-left
   possiblePositions.push(
     ...generateTargetCells(
-      b,
-      s,
+      board,
+      position,
       1,
       -1,
       (r) => r <= 8,
@@ -91,8 +94,8 @@ const generateValidDiagonalPositions = (b: Board, s: Position) => {
   // Moving down-right
   possiblePositions.push(
     ...generateTargetCells(
-      b,
-      s,
+      board,
+      position,
       -1,
       1,
       (r) => r >= 1,
@@ -103,14 +106,14 @@ const generateValidDiagonalPositions = (b: Board, s: Position) => {
   return possiblePositions;
 };
 
-const generateValidCardinalPositions = (b: Board, s: Position) => {
+const generateValidCardinalPositions = (board: Board, position: Position) => {
   const possiblePositions: Position[] = [];
 
   // Moving right
   possiblePositions.push(
     ...generateTargetCells(
-      b,
-      s,
+      board,
+      position,
       0,
       1,
       () => true,
@@ -121,8 +124,8 @@ const generateValidCardinalPositions = (b: Board, s: Position) => {
   // Moving left
   possiblePositions.push(
     ...generateTargetCells(
-      b,
-      s,
+      board,
+      position,
       0,
       -1,
       () => true,
@@ -133,8 +136,8 @@ const generateValidCardinalPositions = (b: Board, s: Position) => {
   // Moving up
   possiblePositions.push(
     ...generateTargetCells(
-      b,
-      s,
+      board,
+      position,
       1,
       0,
       (r) => r <= 8,
@@ -145,8 +148,8 @@ const generateValidCardinalPositions = (b: Board, s: Position) => {
   // Moving down
   possiblePositions.push(
     ...generateTargetCells(
-      b,
-      s,
+      board,
+      position,
       -1,
       0,
       (r) => r >= 1,
@@ -164,7 +167,7 @@ const generateValidPawnPositions = (
 ) => {
   const possiblePositions: Position[] = [];
   const sourceCell = toCell(source);
-  const piece = board[sourceCell]!;
+  const piece = board.getPieceAt(sourceCell)!;
   const isWhite = piece.color === "White";
   const firstMove = isWhite ? source.row === 2 : source.row === 7;
   const direction = isWhite ? 1 : -1;
@@ -183,20 +186,20 @@ const generateValidPawnPositions = (
 
   // Basic move logic + capture
 
-  if (!board[toCell(forwardOne)]) {
+  if (board.isEmptyAt(forwardOne)) {
     possiblePositions.push(forwardOne);
   }
 
-  if (firstMove && !board[toCell(forwardOne)] && !board[toCell(forwardTwo)]) {
+  if (firstMove && board.isEmptyAt(forwardOne) && board.isEmptyAt(forwardTwo)) {
     possiblePositions.push(forwardTwo);
   }
 
-  const diagonalLeftTarget = board[toCell(diagonalLeft)];
+  const diagonalLeftTarget = board.getPieceAt(diagonalLeft);
   if (diagonalLeftTarget && diagonalLeftTarget.color !== piece.color) {
     possiblePositions.push(diagonalLeft);
   }
 
-  const diagnoalRightTarget = board[toCell(diagonalRight)];
+  const diagnoalRightTarget = board.getPieceAt(diagonalRight);
   if (diagnoalRightTarget && diagnoalRightTarget.color !== piece.color) {
     possiblePositions.push(diagonalRight);
   }
@@ -207,20 +210,17 @@ const generateValidPawnPositions = (
   }
 
   // Last move was NOT a pawn - en passant is not possible
-  if (
-    lastMove &&
-    board[lastMove.target] &&
-    board[lastMove.target]?.class !== "Pawn"
-  ) {
+  const lastMoveTargetPiece = board.getPieceAt(lastMove.target);
+
+  if (lastMoveTargetPiece && lastMoveTargetPiece?.class !== "Pawn") {
     return possiblePositions;
   }
 
   // Last move was a pawn - but the same color as the current moving pawn (should not really happen but whatever)
   if (
-    lastMove &&
-    board[lastMove.target] &&
-    board[lastMove.target]?.class === "Pawn" &&
-    board[lastMove.target]?.color === piece.color
+    lastMoveTargetPiece &&
+    lastMoveTargetPiece?.class === "Pawn" &&
+    lastMoveTargetPiece?.color === piece.color
   ) {
     return possiblePositions;
   }
@@ -229,10 +229,9 @@ const generateValidPawnPositions = (
   const lastMoveSourcePosition = toPosition(lastMove.source);
   const lastMoveTargetPosition = toPosition(lastMove.target);
   if (
-    lastMove &&
-    board[lastMove.target] &&
-    board[lastMove.target]?.class === "Pawn" &&
-    board[lastMove.target]?.color !== piece.color &&
+    lastMoveTargetPiece &&
+    lastMoveTargetPiece?.class === "Pawn" &&
+    lastMoveTargetPiece?.color !== piece.color &&
     (Math.abs(lastMoveTargetPosition.row - lastMoveSourcePosition.row) !== 2 ||
       lastMoveSourcePosition.column !== lastMoveTargetPosition.column)
   ) {
@@ -251,7 +250,7 @@ const generateValidPawnPositions = (
   };
 
   const rightCell = toCell(right);
-  const rightTarget = board[rightCell];
+  const rightTarget = board.getPieceAt(rightCell);
   const enPassantRightPosition = {
     column: right.column,
     row: source.row + direction,
@@ -261,13 +260,13 @@ const generateValidPawnPositions = (
     rightTarget &&
     rightTarget.class === "Pawn" &&
     rightCell === lastMove?.target &&
-    !board[toCell(enPassantRightPosition)]
+    board.isEmptyAt(enPassantRightPosition)
   ) {
     possiblePositions.push(enPassantRightPosition);
   }
 
   const leftCell = toCell(left);
-  const leftTarget = board[leftCell];
+  const leftTarget = board.getPieceAt(leftCell);
   const enPassantLeftPosition = {
     column: left.column,
     row: source.row + direction,
@@ -277,7 +276,7 @@ const generateValidPawnPositions = (
     leftTarget &&
     leftTarget.class === "Pawn" &&
     leftCell === lastMove?.target &&
-    !board[toCell(enPassantLeftPosition)]
+    board.isEmptyAt(enPassantLeftPosition)
   ) {
     possiblePositions.push(enPassantLeftPosition);
   }
@@ -314,12 +313,12 @@ export const generators: Record<PieceClass, TargetCellGenerator> = {
         .map(toCell)
         .filter(
           (c) =>
-            (board[c] && board[c].color !== board[toCell(source)]!.color) ||
-            !board[c],
+            board.getPieceAt(c)?.color !== board.getPieceAt(source)!.color ||
+            board.isEmptyAt(c),
         );
 
       // Castling
-      if (hasPieceMoved(board[toCell(source)]!, movedPieces)) {
+      if (hasPieceMoved(board.getPieceAt(source), movedPieces)) {
         return filteredPositions;
       }
 
@@ -343,10 +342,12 @@ export const generators: Record<PieceClass, TargetCellGenerator> = {
           }),
         ].map(toCell);
 
+        const maybeRook = board.getPieceAt(rookCell);
+
         return (
-          board[rookCell]?.class === "Rook" &&
-          !hasPieceMoved(board[rookCell], movedPieces) &&
-          cellsToBeEmpty.every((c) => !board[c]) &&
+          maybeRook?.class === "Rook" &&
+          !hasPieceMoved(maybeRook, movedPieces) &&
+          cellsToBeEmpty.every((c) => board.isEmptyAt(c)) &&
           !areCellsTargeted(targetedCells, cellsToBeSafe)
         );
       };
@@ -394,8 +395,8 @@ export const generators: Record<PieceClass, TargetCellGenerator> = {
         .map(toCell)
         .filter(
           (c) =>
-            (board[c] && board[c].color !== board[toCell(source)]!.color) ||
-            !board[c],
+            board.getPieceAt(c)?.color !== board.getPieceAt(source)!.color ||
+            board.isEmptyAt(c),
         );
     },
   },
