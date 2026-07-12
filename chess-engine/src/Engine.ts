@@ -196,11 +196,21 @@ export class Engine {
   /* --------------------------------------------------------------*/
 
   print() {
-    console.log("Current board state: ", this.board);
+    console.log("[ENGINE] STATE");
     console.log(
-      "Current history:",
+      "[ENGINE] Board state: ",
+      this.board
+        .getPieces()
+        .map((p) => `${p} : ${this.board.getPieceAt(p)!.id}`),
+    );
+    console.log(
+      "[ENGINE] History:",
       this.history.map((move) => move.source + " -> " + move.target).join("\n"),
     );
+
+    console.log("[ENGINE] Moved pieces:", this.movedPieces);
+    console.log("[ENGINE] Target cells:", this.targetedCellsByColor);
+    console.log("[ENGINE] /STATE");
   }
 
   movePiece(move: EnrichedMove) {
@@ -261,6 +271,8 @@ export class Engine {
 
     this.colorToMove = otherColor(this.colorToMove);
     this.validMovesCache = [];
+
+    this.print();
   }
 
   getValidPositionsForPiece(source: string) {
