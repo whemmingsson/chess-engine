@@ -1,5 +1,5 @@
-import { EnrichedMove } from "../../common/models/EnrichedMove";
-import { Piece, PieceColor } from "../../common/models/Piece";
+import { EnrichedMove } from "@chess-engine/common/models/EnrichedMove";
+import { Piece, PieceColor } from "@chess-engine/common/models/Piece";
 import { Board } from "./Board";
 import { config } from "./config/config";
 import { classifyMove } from "./MoveClassiification";

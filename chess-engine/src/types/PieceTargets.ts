@@ -1,4 +1,4 @@
-import { Piece } from "../../../common/models/Piece";
+import { Piece } from "@chess-engine/common/models/Piece";
 
 export interface PieceTargets {
   piece: Piece | null;

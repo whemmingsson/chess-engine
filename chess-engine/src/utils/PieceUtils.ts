@@ -1,8 +1,12 @@
 import {
   makeId,
   pieceDefinitionMap,
-} from "../../../common/config/board-config";
-import { Piece, PieceClass, PieceColor } from "../../../common/models/Piece";
+} from "@chess-engine/common/config/board-config";
+import {
+  Piece,
+  PieceClass,
+  PieceColor,
+} from "@chess-engine/common/models/Piece";
 
 export const createNewPieceOfClass = (
   pieceClass: PieceClass,

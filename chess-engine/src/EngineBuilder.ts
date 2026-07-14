@@ -1,4 +1,8 @@
-import { Piece, PieceClass, PieceColor } from "../../common/models/Piece";
+import {
+  Piece,
+  PieceClass,
+  PieceColor,
+} from "@chess-engine/common/models/Piece";
 import { Engine } from "./Engine";
 import { createNewPieceOfClass } from "./utils/PieceUtils";
 

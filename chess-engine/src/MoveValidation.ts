@@ -1,5 +1,5 @@
-import { Move } from "../../common/models/Move";
-import { nameOf, Piece, PieceColor } from "../../common/models/Piece";
+import { Move } from "@chess-engine/common/models/Move";
+import { nameOf, Piece, PieceColor } from "@chess-engine/common/models/Piece";
 import { InternalMove } from "./types/InternalMove";
 import { Position } from "./types/Position";
 import { toPosition } from "./utils/ConversionUtils";

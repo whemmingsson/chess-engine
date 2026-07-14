@@ -1,0 +1,6 @@
+packages:
+  - common
+  - chess-engine
+  - chess-engine-frontend
+  - chess-engine-electron
+  - chess-bots

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Move } from "../../../common/models/Move";
+import type { Move } from "@chess-engine/common/models/Move";
 import { toast } from "react-toastify";
 import {
   BoardService,

@@ -1,11 +1,11 @@
-import {
+import type {
   EnrichedMove,
   MoveMetaData,
-} from "../../../common/models/EnrichedMove";
-import { Move } from "../../../common/models/Move";
-import { PieceColor } from "../../../common/models/Piece";
-import { InternalMove } from "../types/InternalMove";
-import { Position } from "../types/Position";
+} from "@chess-engine/common/models/EnrichedMove";
+import type { Move } from "@chess-engine/common/models/Move";
+import type { PieceColor } from "@chess-engine/common/models/Piece";
+import type { InternalMove } from "../types/InternalMove";
+import type { Position } from "../types/Position";
 
 export const toPosition = (cell: String): Position => {
   if (cell.length !== 2) {

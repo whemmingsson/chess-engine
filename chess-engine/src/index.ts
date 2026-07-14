@@ -1,14 +1,14 @@
 import express from "express";
 import cors from "cors";
 import { Engine, type EngineInstance } from "./Engine";
-import type { Move } from "../../common/models/Move";
+import type { Move } from "@chess-engine/common/models/Move";
 import { config } from "./config/config";
 import { getPreset, getPresetKeys } from "./EnginePresets";
-import { Runner } from "./Runner";
+import { RunnerGameService } from "./RunnerGameService";
 
 const app = express();
 let engine: EngineInstance = new Engine();
-let runner = new Runner();
+const runnerGame = new RunnerGameService();
 
 app.use(
   cors({
@@ -48,31 +48,28 @@ const createMoveHandler =
 const runnerRouter = express.Router();
 
 runnerRouter.get("/board", (_req, res) => {
-  res.status(200).json({ board: runner.getEngine().getBoard().getBoard() });
+  res.status(200).json({ board: runnerGame.getBoard() });
 });
 
 runnerRouter.get("/valid-targets/:source", (req, res) => {
   const { source } = req.params;
-  const targetCells = runner.getEngine().getValidPositionsForPiece(source);
+  const targetCells = runnerGame.getValidTargets(source);
 
   res.status(200).json({ targetCells });
 });
 
 runnerRouter.post("/reset", (_req, res) => {
-  const currentEngine = runner.getEngine();
-  currentEngine.resetGame();
-
   res.status(200).json({
     success: true,
-    board: currentEngine.getBoard().getBoard(),
+    board: runnerGame.reset(),
   });
 });
 
 runnerRouter.post(
   "/move",
   createMoveHandler(
-    (move) => runner.move(move),
-    () => runner.getEngine().getBoard(),
+    (move) => runnerGame.move(move),
+    () => runnerGame.getRunner().getEngine().getBoard(),
   ),
 );
 

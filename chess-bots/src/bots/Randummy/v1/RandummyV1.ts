@@ -1,15 +1,15 @@
-import { Engine } from "../../../../../chess-engine/src/Engine";
-import { EnrichedMove } from "../../../../../common/models/EnrichedMove";
-import { PieceColor } from "../../../../../common/models/Piece";
+import { EnrichedMove } from "@chess-engine/common/models/EnrichedMove";
+import { PieceColor } from "@chess-engine/common/models/Piece";
 import { Bot } from "../../../common/Bot";
+import { BotEngine } from "../../../common/BotEngine";
 
 export class RandummyV1 implements Bot {
-  engine: Engine;
+  engine: BotEngine;
   color: PieceColor;
   /**
    *
    */
-  constructor(engine: Engine, color: PieceColor) {
+  constructor(engine: BotEngine, color: PieceColor) {
     this.engine = engine;
     this.color = color;
   }

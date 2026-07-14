@@ -1,5 +1,5 @@
-import { EnrichedMove } from "../../common/models/EnrichedMove";
-import { Move } from "../../common/models/Move";
+import { EnrichedMove } from "@chess-engine/common/models/EnrichedMove";
+import { Move } from "@chess-engine/common/models/Move";
 import { Board } from "./Board";
 import { MoveClass } from "./types/MoveClass";
 import { toPosition } from "./utils/ConversionUtils";

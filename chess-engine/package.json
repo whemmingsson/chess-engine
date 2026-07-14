@@ -3,12 +3,25 @@
 	"version": "1.0.0",
 	"private": true,
 	"description": "Simple Node.js app compiled from TypeScript with tsc",
-	"main": "dist/chess-engine/src/index.js",
+	"main": "dist/index.js",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./runtime": {
+			"types": "./dist/runtime.d.ts",
+			"default": "./dist/runtime.js"
+		}
+	},
+	"files": [
+		"dist"
+	],
 	"scripts": {
-		"build": "tsc",
+		"build": "pnpm --dir ../common build && pnpm --dir ../chess-bots build && tsc",
 		"dev": "tsx watch src/index.ts",
 		"dev:debug": "tsx watch src/Driver.ts",
-		"start": "node dist/chess-engine/src/index.js",
+		"start": "node dist/index.js",
 		"clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\""
 	},
 	"engines": {
@@ -22,6 +35,8 @@
 		"typescript": "^6.0.3"
 	},
 	"dependencies": {
+		"@chess-engine/chess-bots": "workspace:*",
+		"@chess-engine/common": "workspace:*",
 		"cors": "^2.8.6",
 		"dotenv": "^17.4.2",
 		"express": "^5.2.1"

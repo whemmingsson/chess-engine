@@ -6,12 +6,11 @@
     "strict": true,
     "declaration": true,
     "esModuleInterop": true,
-    "types": ["node"],
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "."
   },
-  "include": ["src/**/*.ts"],
+  "include": ["config/**/*.ts", "models/**/*.ts", "utils/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -1,0 +1,25 @@
+{
+  "name": "chess-engine-electron",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Electron shell for the runner-only desktop app.",
+  "main": "dist/chess-engine-electron/src/main.js",
+  "scripts": {
+    "build": "pnpm --dir ../common build && pnpm --dir ../chess-bots build && pnpm --dir ../chess-engine build && tsc -p tsconfig.json",
+    "dev": "wait-on tcp:127.0.0.1:4173 && pnpm build && pnpm exec electron .",
+    "smoke": "pnpm build && node dist/chess-engine-electron/src/smoke.js",
+    "start": "pnpm exec electron ."
+  },
+  "dependencies": {
+    "@chess-engine/chess-bots": "workspace:*",
+    "@chess-engine/common": "workspace:*",
+    "chess-engine": "workspace:*",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "electron": "^30.0.0",
+    "typescript": "^6.0.3",
+    "wait-on": "^8.0.5"
+  }
+}

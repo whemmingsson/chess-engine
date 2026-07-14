@@ -1,10 +1,31 @@
 {
-  "name": "chess-bots",
+  "name": "@chess-engine/chess-bots",
+  "private": true,
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Bot implementations for chess engine integrations.",
+  "main": "dist/index.js",
+  "exports": {
+    "./common/*": {
+      "types": "./dist/common/*.d.ts",
+      "default": "./dist/common/*.js"
+    },
+    "./bots/*": {
+      "types": "./dist/bots/*.d.ts",
+      "default": "./dist/bots/*.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "pnpm --dir ../common build && tsc -p tsconfig.json",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@chess-engine/common": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   },
   "keywords": [],
   "author": "",

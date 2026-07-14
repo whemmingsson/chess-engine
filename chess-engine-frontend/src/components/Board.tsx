@@ -2,11 +2,11 @@ import clsx from "clsx";
 import styles from "./Board.module.css";
 import { getPieceSvg } from "../utils/piece-svg-util";
 import React from "react";
-import type { EnrichedMove } from "../../../common/models/EnrichedMove";
-import type { Piece, PieceClass } from "../../../common/models/Piece";
+import type { EnrichedMove } from "@chess-engine/common/models/EnrichedMove";
+import type { Piece, PieceClass } from "@chess-engine/common/models/Piece";
 import { useBoard } from "../hooks/useBoard";
 import type { BoardCellKey } from "../service/BoardService";
-import { pieceDefinitionMap } from "../../../common/config/board-config";
+import { pieceDefinitionMap } from "@chess-engine/common/config/board-config";
 
 const toLetter = (index: number) => {
   return String.fromCharCode(index + 65);

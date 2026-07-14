@@ -1,9 +1,9 @@
 import { BoardMap } from "./types/BoardMap";
 import { Position } from "./types/Position";
 import { otherColor, toCell, toPosition } from "./utils/ConversionUtils";
-import { PieceClass } from "../../common/models/Piece";
-import { Move } from "../../common/models/Move";
-import { hasPieceMoved } from "../../common/utils/MovedPiecesUtils";
+import { PieceClass } from "@chess-engine/common/models/Piece";
+import { Move } from "@chess-engine/common/models/Move";
+import { hasPieceMoved } from "@chess-engine/common/utils/MovedPiecesUtils";
 import { areCellsTargeted, PieceTargets } from "./types/PieceTargets";
 import { Board } from "./Board";
 

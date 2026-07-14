@@ -1,7 +1,11 @@
-import { pieceMap } from "../../common/config/board-config";
-import { EnrichedMove } from "../../common/models/EnrichedMove";
-import { Move } from "../../common/models/Move";
-import { Piece, PieceClass, PieceColor } from "../../common/models/Piece";
+import { pieceMap } from "@chess-engine/common/config/board-config";
+import { EnrichedMove } from "@chess-engine/common/models/EnrichedMove";
+import { Move } from "@chess-engine/common/models/Move";
+import {
+  Piece,
+  PieceClass,
+  PieceColor,
+} from "@chess-engine/common/models/Piece";
 import { BoardMap } from "./types/BoardMap";
 import { Position } from "./types/Position";
 import { toCell, toPosition } from "./utils/ConversionUtils";

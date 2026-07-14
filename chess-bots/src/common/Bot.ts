@@ -1,4 +1,4 @@
-import { EnrichedMove } from "../../../common/models/EnrichedMove";
+import { EnrichedMove } from "@chess-engine/common/models/EnrichedMove";
 
 export abstract class Bot {
   abstract getMove(): EnrichedMove;

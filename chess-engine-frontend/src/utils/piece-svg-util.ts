@@ -1,4 +1,4 @@
-import type { Piece } from "../../../common/models/Piece";
+import type { Piece } from "@chess-engine/common/models/Piece";
 import * as pieces from "../assets/pieces-2";
 
 type PieceKey =

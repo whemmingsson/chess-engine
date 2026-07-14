@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "pnpm --dir ../common build && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@chess-engine/common": "workspace:*",
     "axios": "^1.17.0",
     "clsx": "^2.1.1",
     "react": "^19.2.6",

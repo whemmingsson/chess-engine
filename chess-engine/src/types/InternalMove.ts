@@ -1,7 +1,6 @@
-import { EnrichedMove } from "../../../common/models/EnrichedMove";
-import { Move } from "../../../common/models/Move";
+import type { EnrichedMove } from "@chess-engine/common/models/EnrichedMove";
 import { toPosition } from "../utils/ConversionUtils";
-import { Position } from "./Position";
+import type { Position } from "./Position";
 
 interface InternalMovePositions {
   // Internal representations as Positions rather than string cell key

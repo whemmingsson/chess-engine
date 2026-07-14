@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "concurrently -n backend,frontend -c yellow,cyan \"pnpm --dir chess-engine dev\" \"pnpm --dir chess-engine-frontend dev\"",
     "dev:backend": "pnpm --dir chess-engine dev",
-    "dev:frontend": "pnpm --dir chess-engine-frontend dev"
+    "dev:frontend": "pnpm --dir chess-engine-frontend dev",
+    "dev:electron": "concurrently -n frontend,electron -c cyan,magenta \"pnpm --dir chess-engine-frontend exec vite --host 127.0.0.1 --port 4173 --strictPort\" \"pnpm --dir chess-engine-electron dev\"",
+    "build:common": "pnpm --dir common build",
+    "build:bots": "pnpm --dir chess-bots build",
+    "build:electron": "pnpm --dir chess-engine-frontend build && pnpm --dir chess-engine-electron build",
+    "smoke:electron": "pnpm --dir chess-engine-electron smoke"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
