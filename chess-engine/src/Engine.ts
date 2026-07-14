@@ -325,6 +325,51 @@ export class Engine {
 
     return [...whiteAttacks, ...blackAttacks];
   }
+
+  /* -------------------------------------------------------------- */
+  /* -------------------------- BOT API --------------------------- */
+  /* -------------------------------------------------------------- */
+
+  getAvailableMoves(color: PieceColor): EnrichedMove[] {
+    const moves: EnrichedMove[] = [];
+    const targets = this._getValidTargetCellsForAll(color);
+
+    for (const p of targets) {
+      const source = p.pieceCell;
+      for (const t of p.targetCells) {
+        const move = { source, target: t } as EnrichedMove;
+
+        // Do some metadata enrichment to help the bots know what kind of move it is
+        const pieceMoving = this.board.getPieceAt(move.source)!;
+        const pieceTargeted = this.board.getPieceAt(move.target);
+
+        const moveWithPieces = enrichMove(move, {
+          ...move.metadata,
+          pieceMoved: pieceMoving,
+          pieceTargeted: pieceTargeted,
+        }) as InternalMove;
+
+        let enrichedMove: EnrichedMove | null = null;
+        switch (classifyMove(moveWithPieces)) {
+          case "EnPassant":
+            enrichedMove = enrichMove(moveWithPieces, { enPassant: true });
+            break;
+          case "Promotion":
+            enrichedMove = enrichMove(moveWithPieces, { promotion: true });
+            break;
+          case "Casteling":
+            enrichedMove = enrichMove(moveWithPieces, { casteling: true });
+            break;
+          default:
+            enrichedMove = moveWithPieces;
+        }
+
+        moves.push(enrichedMove);
+      }
+    }
+
+    return moves;
+  }
 }
 
 export type EngineInstance = InstanceType<typeof Engine>;

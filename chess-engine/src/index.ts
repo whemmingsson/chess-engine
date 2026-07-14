@@ -4,9 +4,11 @@ import { Engine, type EngineInstance } from "./Engine";
 import type { Move } from "../../common/models/Move";
 import { config } from "./config/config";
 import { getPreset, getPresetKeys } from "./EnginePresets";
+import { Runner } from "./Runner";
 
 const app = express();
 let engine: EngineInstance = new Engine();
+let runner = new Runner();
 
 app.use(
   cors({
@@ -19,6 +21,62 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
+
+const createMoveHandler =
+  (
+    performMove: (move: Move) => void,
+    getBoard: () => ReturnType<EngineInstance["getBoard"]>,
+  ) =>
+  (req: express.Request, res: express.Response) => {
+    try {
+      const move = req.body as Move;
+      performMove(move);
+
+      res.status(200).json({
+        success: true,
+        board: getBoard().getBoard(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Move failed";
+      res.status(400).json({
+        success: false,
+        message,
+      });
+    }
+  };
+
+const runnerRouter = express.Router();
+
+runnerRouter.get("/board", (_req, res) => {
+  res.status(200).json({ board: runner.getEngine().getBoard().getBoard() });
+});
+
+runnerRouter.get("/valid-targets/:source", (req, res) => {
+  const { source } = req.params;
+  const targetCells = runner.getEngine().getValidPositionsForPiece(source);
+
+  res.status(200).json({ targetCells });
+});
+
+runnerRouter.post("/reset", (_req, res) => {
+  const currentEngine = runner.getEngine();
+  currentEngine.resetGame();
+
+  res.status(200).json({
+    success: true,
+    board: currentEngine.getBoard().getBoard(),
+  });
+});
+
+runnerRouter.post(
+  "/move",
+  createMoveHandler(
+    (move) => runner.move(move),
+    () => runner.getEngine().getBoard(),
+  ),
+);
+
+app.use("/runner", runnerRouter);
 
 app.get("/board", (_req, res) => {
   res.status(200).json({ board: engine.getBoard().getBoard() });
@@ -75,21 +133,10 @@ app.get("/preset-keys", (_req, res) => {
 });
 
 app.post("/move", (req, res) => {
-  try {
-    const move = req.body as Move;
-    engine.movePiece(move);
-
-    res.status(200).json({
-      success: true,
-      board: engine.getBoard().getBoard(),
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Move failed";
-    res.status(400).json({
-      success: false,
-      message,
-    });
-  }
+  return createMoveHandler(
+    (move) => engine.movePiece(move),
+    () => engine.getBoard(),
+  )(req, res);
 });
 
 app.listen(config.server.port, () => {

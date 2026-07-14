@@ -5,6 +5,7 @@ export type MoveMetaData = object & {
   enPassant?: boolean;
   casteling?: boolean;
   casteledRook?: Piece;
+  promotion?: boolean;
   promoteTo?: PieceClass;
   pieceMoved?: Piece | null;
   pieceTargeted?: Piece | null;

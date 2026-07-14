@@ -130,6 +130,13 @@ Base URL: `http://localhost:3000`
 - `POST /reset` -> resets game state to the default starting board
 - `POST /preset?presetKey=<key>` -> loads a board preset and resets engine state to it
 
+Runner-backed API endpoints:
+
+- `GET /runner/board` -> returns board state from the runner's internal engine
+- `GET /runner/valid-targets/:source` -> returns valid target cells from the runner's internal engine
+- `POST /runner/reset` -> resets the runner's internal engine state
+- `POST /runner/move` -> performs the player move, then the runner bot move
+
 Example move payload:
 
 ```json
